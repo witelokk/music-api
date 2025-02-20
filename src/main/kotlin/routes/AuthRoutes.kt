@@ -19,9 +19,7 @@ import kotlin.time.Duration
 
 val TOKEN_TTL = Duration.parse("24h")
 
-fun Route.authRoutes(redis: KredsClient) {
-    val secret = "secret"
-
+fun Route.authRoutes(redis: KredsClient, jwtSecret: String) {
     post("/tokens") {
         val request = call.receive<TokensRequest>()
 
@@ -46,7 +44,7 @@ fun Route.authRoutes(redis: KredsClient) {
         val jwt = JWT.create()
             .withClaim("sub", user[Users.id].toString())
             .withExpiresAt(DateTime.now().plusSeconds(TOKEN_TTL.inWholeSeconds.toInt()).toDate())
-            .sign(Algorithm.HMAC256("secret"))
+            .sign(Algorithm.HMAC256(jwtSecret))
 
         call.respond(HttpStatusCode.Created, TokensResponse(jwt))
     }

@@ -1,16 +1,18 @@
 package com.witelokk
 
 import com.witelokk.tables.Users
+import io.ktor.server.engine.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 
-fun connectToDatabase() {
+fun connectToDatabase(url: String, user: String, password: String = "") {
+
     Database.connect(
-        url = "jdbc:postgresql://localhost:5333/",
+        url = "jdbc:$url",
         driver = "org.postgresql.Driver",
-        user = "postgres",
-//        password = "postgres"
+        user = user,
+        password = password,
     )
     println("Database connected successfully")
 
