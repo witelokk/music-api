@@ -1,18 +1,16 @@
 package com.witelokk
 
-import io.ktor.serialization.kotlinx.json.*
+import com.witelokk.routes.authRoutes
+import com.witelokk.routes.userRoutes
+import com.witelokk.routes.verificationRoutes
+import io.github.crackthecodeabhi.kreds.connection.KredsClient
 import io.ktor.server.application.*
-import io.ktor.server.http.content.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Application.configureRouting() {
+fun Application.configureRouting(redis: KredsClient) {
     routing {
-        get("/") {
-            call.respondText("Hello World!")
-        }
-        // Static plugin. Try to access `/static/index.html`
-        staticResources("/static", "static")
+        userRoutes(redis)
+        verificationRoutes(redis)
+        authRoutes(redis)
     }
 }
