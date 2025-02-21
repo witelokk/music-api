@@ -16,6 +16,11 @@ fun Application.module() {
     val databasePassword = environment.config.property("database.password").getString()
     val redisUrl = environment.config.property("redis.url").getString()
     val jwtSecret = environment.config.property("jwt.secret").getString()
+    val mailgunApiKey = environment.config.property("mailgun.api_key").getString()
+    val mailGunDomain = environment.config.property("mailgun.domain").getString()
+    val mailGunFrom = environment.config.property("mailgun.from").getString()
+
+    val emailSender: EmailSender = MailgunEmailSender(mailgunApiKey, mailGunDomain, mailGunFrom)
 
     connectToDatabase(databaseUrl, databaseUser, databasePassword)
 
@@ -26,7 +31,7 @@ fun Application.module() {
 
     routing {
         userRoutes(redis)
-        verificationRoutes(redis)
+        verificationRoutes(redis, emailSender)
         authRoutes(redis, jwtSecret)
 
         artistsRoutes()

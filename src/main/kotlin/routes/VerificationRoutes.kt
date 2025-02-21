@@ -18,7 +18,7 @@ import kotlin.time.Duration
 val SEND_NEW_CODE_AFTER = Duration.parse("2m")
 val CODE_TTL = Duration.parse("10m")
 
-fun Route.verificationRoutes(redis: KredsClient) {
+fun Route.verificationRoutes(redis: KredsClient, emailSender: EmailSender) {
     post("/verification-code-request") {
         val request = call.receive<VerificationCodeRequest>()
 
@@ -44,12 +44,6 @@ fun Route.verificationRoutes(redis: KredsClient) {
         }
 
         // send verification email
-        val emailSender: EmailSender = MailgunEmailSender(
-            "f9d1510a27aabd3d2543c788326a6106-ac3d5f74-3636fdce",
-            "sandbox289b8ffdf2ce40658fc7b326b7b91279.mailgun.org",
-            "noreply@sandbox289b8ffdf2ce40658fc7b326b7b91279.mailgun.org"
-        )
-
         try {
             emailSender.sendEmail(
                 listOf(request.email), "Account Verification", """Your Music code: <strong>${code}</strong>

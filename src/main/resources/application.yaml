@@ -15,3 +15,9 @@ redis:
 
 jwt:
     secret: $JWT_SECRET
+
+mailgun:
+    api_key: $MAILGUN_API_KEY
+    domain: $MAILGUN_DOMAIN
+    from: $MAILGUN_FROM
+

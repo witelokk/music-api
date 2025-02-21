@@ -31,9 +31,6 @@ class MailgunEmailSender(
             }
         }
 
-        println("Response status: ${response.status}")
-        println("Response body: ${response.bodyAsText()}")
-
         if (!response.status.isSuccess()) {
             throw Exception(response.readRawBytes().decodeToString())
         }
