@@ -36,5 +36,6 @@ fun Application.module() {
 
         artistsRoutes()
         songsRoutes()
+        favoriteRoutes()
     }
 }

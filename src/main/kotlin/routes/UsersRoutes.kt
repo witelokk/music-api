@@ -1,5 +1,6 @@
 package com.witelokk.routes
 
+import com.witelokk.PG_FOREIGN_KEY_VIOLATION
 import com.witelokk.models.CreateUserRequest
 import com.witelokk.models.FailureResponse
 import com.witelokk.tables.Users
@@ -40,7 +41,7 @@ fun Route.userRoutes(redis: KredsClient) {
                     }
                 }
             } catch (e: SQLException) {
-                if (e.sqlState == "23505") {
+                if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
                     call.respond(
                         HttpStatusCode.Conflict, FailureResponse("user_exists", "User with such email already exists")
                     )
