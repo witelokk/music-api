@@ -1,8 +1,6 @@
 package com.witelokk
 
-import com.witelokk.routes.authRoutes
-import com.witelokk.routes.userRoutes
-import com.witelokk.routes.verificationRoutes
+import com.witelokk.routes.*
 import io.github.crackthecodeabhi.kreds.connection.Endpoint
 import io.github.crackthecodeabhi.kreds.connection.newClient
 import io.ktor.server.application.*
@@ -30,5 +28,8 @@ fun Application.module() {
         userRoutes(redis)
         verificationRoutes(redis)
         authRoutes(redis, jwtSecret)
+
+        artistsRoutes()
+        songsRoutes()
     }
 }

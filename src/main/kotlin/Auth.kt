@@ -11,7 +11,7 @@ import io.ktor.server.response.*
 
 fun Application.configureAuth(secret: String) {
     install(Authentication) {
-        jwt {
+        jwt("auth-jwt") {
             verifier(
                 JWT.require(Algorithm.HMAC256(secret)).build()
             )
