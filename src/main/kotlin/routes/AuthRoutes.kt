@@ -12,9 +12,10 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
+import java.util.*
 import kotlin.time.Duration
 
 
@@ -24,25 +25,23 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
     suspend fun validateCode(email: String, code: String): String? {
         redis.use { client ->
             val isCodeValid = client.exists("verification:${email}:${code}") == 1L
-
             if (!isCodeValid) {
                 return null
             }
-
             client.del("verification:${email}:${code}")
             return email
         }
-
     }
 
-    fun validateGoogleToken(token: String): String? {
-        return googleIdTokenVerifier.verify(token)?.payload?.email
+    fun validateGoogleToken(token: String): Pair<String, String?>? {
+        val payload = googleIdTokenVerifier.verify(token)?.payload ?: return null
+        return payload.email to payload["name"] as? String
     }
 
     post("/tokens") {
         val request = call.receive<TokensRequest>()
 
-        val email = when (request.grantType) {
+        val (email, name) = when (request.grantType) {
             "code" -> {
                 val email = request.email ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
@@ -52,8 +51,7 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
                     HttpStatusCode.BadRequest,
                     FailureResponse("no_code", "No code provided")
                 )
-
-                validateCode(email, code) ?: return@post call.respond(
+                validateCode(email, code)?.let { it to null } ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
                     FailureResponse("invalid_code", "Invalid code")
                 )
@@ -64,19 +62,16 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
                     HttpStatusCode.BadRequest,
                     FailureResponse("no_google_token", "No google_token provided")
                 )
-
                 validateGoogleToken(token) ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
-                    FailureResponse("invalid_google_id_token", "Invalid google id")
+                    FailureResponse("invalid_google_id_token", "Invalid Google ID token")
                 )
             }
 
-            else -> {
-                return@post call.respond(
-                    HttpStatusCode.BadRequest,
-                    FailureResponse("invalid_grant_type", "Invalid grant_type")
-                )
-            }
+            else -> return@post call.respond(
+                HttpStatusCode.BadRequest,
+                FailureResponse("invalid_grant_type", "Invalid grant_type")
+            )
         }
 
         val user = transaction {
@@ -84,11 +79,28 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
         }
 
         if (user == null) {
-            return@post call.respond(HttpStatusCode.BadRequest, FailureResponse("invalid_user", "User not found"))
+            if (request.grantType == "google_token") {
+                transaction {
+                    val newUserId = UUID.randomUUID()
+                    val newName = name ?: "Unknown User"
+                    Users.insert {
+                        it[id] = newUserId
+                        it[Users.name] = newName
+                        it[Users.email] = email
+                        it[createdAt] = DateTime.now()
+                    }
+                }
+            } else {
+                return@post call.respond(HttpStatusCode.BadRequest, FailureResponse("invalid_user", "User not found"))
+            }
+        }
+
+        val existingUser = transaction {
+            Users.select { Users.email eq email }.single()
         }
 
         val jwt = JWT.create()
-            .withClaim("sub", user[Users.id].toString())
+            .withClaim("sub", existingUser[Users.id].toString())
             .withExpiresAt(DateTime.now().plusSeconds(TOKEN_TTL.inWholeSeconds.toInt()).toDate())
             .sign(Algorithm.HMAC256(jwtSecret))
 
