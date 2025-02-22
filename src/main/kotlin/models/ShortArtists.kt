@@ -6,5 +6,7 @@ import models.ShortArtist
 @Serializable
 data class ShortArtists(
     val count: Int,
-    val artists: List<ShortArtist>
-)
+    val artists: List<ShortArtist>,
+) {
+    val names = artists.joinToString(", ") { it.name }
+}

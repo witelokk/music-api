@@ -31,18 +31,12 @@ fun Route.songsRoutes() {
                     )
                 }
 
-                val song = transaction {
-                    getSongWithArtistsAndFavorite(songId, userId)
-                }
-
-                if (song == null) {
-                    return@get call.respond(
+                val song = getSongWithArtistsAndFavorite(songId, userId)
+                    ?: return@get call.respond(
                         HttpStatusCode.NotFound, FailureResponse("song_not_found", "Song not found")
                     )
-                }
 
                 call.respond(song);
-
             }
         }
     }
