@@ -2,12 +2,10 @@ package com.witelokk.routes
 
 import com.witelokk.PG_FOREIGN_KEY_VIOLATION
 import com.witelokk.PG_UNIQUE_VIOLATION
-import com.witelokk.models.AddFavoriteSongRequest
 import com.witelokk.models.FailureResponse
-import com.witelokk.tables.Artists
-import com.witelokk.tables.Favorites
-import com.witelokk.tables.SongArtists
-import com.witelokk.tables.Songs
+import com.witelokk.models.StartFollowingRequest
+import com.witelokk.models.StopFollowingRequest
+import com.witelokk.tables.*
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -15,7 +13,6 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import models.ShortArtist
-import models.Song
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -25,38 +22,37 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.sql.SQLException
 import java.util.*
 
-
-fun Route.favoriteRoutes() {
+fun Route.followingsRoutes() {
     authenticate("auth-jwt") {
-        route("/favorites") {
+        route("/followings") {
             get("/") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
-                val favorites = getFavoriteSongs(userId)
+                val followings = getFollowings(userId)
 
                 call.respond(
-                    com.witelokk.models.Songs(count = favorites.count(), songs = favorites),
+                    com.witelokk.models.ShortArtists(count = followings.count(), artists = followings),
                 )
             }
 
             post("/") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
-                val request = call.receive<AddFavoriteSongRequest>()
+                val request = call.receive<StartFollowingRequest>()
 
                 try {
-                    addFavoriteSong(userId, UUID.fromString(request.songId))
+                    startFollowing(userId, UUID.fromString(request.artistId))
                 } catch (e: SQLException) {
                     if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
                         return@post call.respond(
                             HttpStatusCode.BadRequest,
-                            FailureResponse("song_not_fount", "Song not found")
+                            FailureResponse("artist_not_fount", "Artist not found")
                         )
                     } else if (e.sqlState == PG_UNIQUE_VIOLATION) {
                         return@post call.respond(
                             HttpStatusCode.BadRequest,
-                            FailureResponse("already_favorite", "Song is already favorite")
+                            FailureResponse("already_following", "You are already following this artist")
                         )
                     }
                 } catch (e: Exception) {
@@ -73,10 +69,10 @@ fun Route.favoriteRoutes() {
             delete("/") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
-                val request = call.receive<AddFavoriteSongRequest>()
+                val request = call.receive<StopFollowingRequest>()
 
                 try {
-                    removeFavoriteSong(userId, UUID.fromString(request.songId))
+                    stopFollowing(userId, UUID.fromString(request.artistId))
                 } catch (e: Exception) {
                     println(e)
                     return@delete call.respond(
@@ -91,49 +87,29 @@ fun Route.favoriteRoutes() {
     }
 }
 
-fun getFavoriteSongs(userId: UUID): List<Song> {
+fun getFollowings(userId: UUID): List<ShortArtist> {
     return transaction {
-        val favoriteSongs = (Favorites innerJoin Songs)
-            .select { Favorites.userId eq userId }
-            .map { it[Songs.id] }
+        Followers.innerJoin(Artists)
+            .select { Followers.userId eq userId }
+            .map { ShortArtist(
+                id = it[Artists.id].toString(),
+                name = it[Artists.name],
+                avatarUrl = it[Artists.avatarUrl],
+            ) }
+    }
+}
 
-        favoriteSongs.mapNotNull { songId ->
-            val songRow = Songs.select { Songs.id eq songId }.singleOrNull() ?: return@mapNotNull null
-
-            val artists = (SongArtists innerJoin Artists)
-                .select { SongArtists.songId eq songId }
-                .map { artistRow ->
-                    ShortArtist(
-                        id = artistRow[Artists.id].toString(),
-                        name = artistRow[Artists.name],
-                        avatarUrl = artistRow[Artists.avatarUrl]
-                    )
-                }
-
-            Song(
-                id = songRow[Songs.id].toString(),
-                name = songRow[Songs.name],
-                coverUrl = songRow[Songs.coverUrl],
-                isFavorite = true,
-                durationSeconds = songRow[Songs.duration],
-                artists = artists,
-                streamUrl = songRow[Songs.streamUrl]
-            )
+fun startFollowing(userId: UUID, artistId: UUID) {
+    transaction {
+        Followers.insert {
+            it[Followers.userId] = userId
+            it[Followers.artistId] = artistId
         }
     }
 }
 
-fun addFavoriteSong(userId: UUID, songId: UUID) {
+fun stopFollowing(userId: UUID, artistId: UUID) {
     transaction {
-        Favorites.insert {
-            it[Favorites.songId] = songId
-            it[Favorites.userId] = userId
-        }
-    }
-}
-
-fun removeFavoriteSong(userId: UUID, songId: UUID) {
-    transaction {
-        Favorites.deleteWhere { (Favorites.songId eq songId) and (Favorites.userId eq userId) }
+        Followers.deleteWhere { (Followers.userId eq userId) and (Followers.artistId eq artistId) }
     }
 }
