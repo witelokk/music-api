@@ -24,5 +24,7 @@ fun connectToDatabase(url: String, user: String, password: String = "") {
         SchemaUtils.create(Releases)
         SchemaUtils.create(ReleaseSongs)
         SchemaUtils.create(ReleaseArtists)
+        SchemaUtils.create(Playlists)
+        SchemaUtils.create(PlaylistsSongs)
     }
 }

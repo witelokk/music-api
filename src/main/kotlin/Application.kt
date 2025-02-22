@@ -39,5 +39,6 @@ fun Application.module() {
         favoriteRoutes()
         followingsRoutes()
         releasesRoutes()
+        playlistsRoutes()
     }
 }
