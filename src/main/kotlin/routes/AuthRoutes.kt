@@ -2,6 +2,7 @@ package com.witelokk.routes
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import com.witelokk.models.FailureResponse
 import com.witelokk.models.TokensRequest
 import com.witelokk.models.TokensResponse
@@ -14,27 +15,72 @@ import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
-import java.time.temporal.ChronoUnit
 import kotlin.time.Duration
+
 
 val TOKEN_TTL = Duration.parse("24h")
 
-fun Route.authRoutes(redis: KredsClient, jwtSecret: String) {
+fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifier: GoogleIdTokenVerifier) {
+    suspend fun validateCode(email: String, code: String): String? {
+        redis.use { client ->
+            val isCodeValid = client.exists("verification:${email}:${code}") == 1L
+
+            if (!isCodeValid) {
+                return null
+            }
+
+            client.del("verification:${email}:${code}")
+            return email
+        }
+
+    }
+
+    fun validateGoogleToken(token: String): String? {
+        return googleIdTokenVerifier.verify(token)?.payload?.email
+    }
+
     post("/tokens") {
         val request = call.receive<TokensRequest>()
 
-        redis.use { client ->
-            val isCodeValid = client.exists("verification:${request.email}:${request.code}") == 1L
+        val email = when (request.grantType) {
+            "code" -> {
+                val email = request.email ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    FailureResponse("no_email", "No email provided")
+                )
+                val code = request.code ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    FailureResponse("no_code", "No code provided")
+                )
 
-            if (!isCodeValid) {
-                return@post call.respond(HttpStatusCode.BadRequest, FailureResponse("invalid_code", "Invalid code"))
+                validateCode(email, code) ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    FailureResponse("invalid_code", "Invalid code")
+                )
             }
 
-            client.del("verification:${request.email}:${request.code}")
+            "google_token" -> {
+                val token = request.googleToken ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    FailureResponse("no_google_token", "No google_token provided")
+                )
+
+                validateGoogleToken(token) ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    FailureResponse("invalid_google_id_token", "Invalid google id")
+                )
+            }
+
+            else -> {
+                return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    FailureResponse("invalid_grant_type", "Invalid grant_type")
+                )
+            }
         }
 
         val user = transaction {
-            Users.select { Users.email eq request.email }.singleOrNull()
+            Users.select { Users.email eq email }.singleOrNull()
         }
 
         if (user == null) {

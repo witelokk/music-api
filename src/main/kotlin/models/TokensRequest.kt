@@ -1,9 +1,12 @@
 package com.witelokk.models
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class TokensRequest(
-    val email: String,
-    val code: String,
+    @SerialName("grant_type") val grantType: String,
+    val email: String? = null,
+    val code: String? = null,
+    @SerialName("google_token") val googleToken: String? = null,
 )

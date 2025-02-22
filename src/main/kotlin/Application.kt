@@ -1,5 +1,8 @@
 package com.witelokk
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
 import com.witelokk.routes.*
 import io.github.crackthecodeabhi.kreds.connection.Endpoint
 import io.github.crackthecodeabhi.kreds.connection.newClient
@@ -19,6 +22,7 @@ fun Application.module() {
     val mailgunApiKey = environment.config.property("mailgun.api_key").getString()
     val mailGunDomain = environment.config.property("mailgun.domain").getString()
     val mailGunFrom = environment.config.property("mailgun.from").getString()
+    val googleAuthAudience = environment.config.property("google-auth.audience").getString().split(',')
 
     val emailSender: EmailSender = MailgunEmailSender(mailgunApiKey, mailGunDomain, mailGunFrom)
 
@@ -29,10 +33,14 @@ fun Application.module() {
     configureAuth(jwtSecret)
     configureSerialization()
 
+    val tokenVerifier = GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory())
+        .setAudience(googleAuthAudience)
+        .build()
+
     routing {
         userRoutes(redis)
         verificationRoutes(redis, emailSender)
-        authRoutes(redis, jwtSecret)
+        authRoutes(redis, jwtSecret, tokenVerifier)
 
         artistsRoutes()
         songsRoutes()

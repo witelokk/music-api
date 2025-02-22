@@ -39,4 +39,6 @@ dependencies {
     implementation("io.github.crackthecodeabhi:kreds:0.9.1")
     implementation("io.ktor:ktor-server-auth:3.0.3")
     implementation("io.ktor:ktor-server-auth-jwt:3.0.3")
+    implementation("com.google.api-client:google-api-client:2.7.2")
+//    implementation("com.google.auth:google-auth-library-oauth2-http:1.22.0")
 }

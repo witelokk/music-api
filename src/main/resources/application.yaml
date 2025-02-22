@@ -21,3 +21,5 @@ mailgun:
     domain: $MAILGUN_DOMAIN
     from: $MAILGUN_FROM
 
+google-auth:
+    audience: $GOOGLE_AUTH_AUDIENCE
