@@ -47,6 +47,11 @@ fun Route.favoriteRoutes() {
 
                 try {
                     addFavoriteSong(userId, UUID.fromString(request.songId))
+                } catch (e: IllegalArgumentException) {
+                    return@post call.respond(
+                        HttpStatusCode.BadRequest,
+                        FailureResponse("song_not_fount", "Song not found")
+                    )
                 } catch (e: SQLException) {
                     if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
                         return@post call.respond(
@@ -77,6 +82,11 @@ fun Route.favoriteRoutes() {
 
                 try {
                     removeFavoriteSong(userId, UUID.fromString(request.songId))
+                } catch (e: IllegalArgumentException) {
+                    return@delete call.respond(
+                        HttpStatusCode.BadRequest,
+                        FailureResponse("song_not_fount", "Song not found")
+                    )
                 } catch (e: Exception) {
                     println(e)
                     return@delete call.respond(

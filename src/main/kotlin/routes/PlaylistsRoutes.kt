@@ -2,7 +2,7 @@ package com.witelokk.routes
 
 import com.witelokk.models.*
 import com.witelokk.tables.Playlists
-import com.witelokk.tables.PlaylistsSongs
+import com.witelokk.tables.PlaylistSongs
 import com.witelokk.tables.Songs
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -44,7 +44,7 @@ fun Route.playlistsRoutes() {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
-                val playlists = getPlaylistsWithSongs(userId)
+                val playlists = getPlaylists(userId)
 
                 call.respond(playlists)
             }
@@ -74,7 +74,7 @@ fun Route.playlistsRoutes() {
                 deletePlaylist(playlistId, userId)
             }
 
-            put("/id") {
+            put("/{id}") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
                 val request = call.receive<UpdatePlaylistRequest>()
@@ -91,7 +91,7 @@ fun Route.playlistsRoutes() {
                     Playlists.select { Playlists.id eq playlistId }.map { it[Playlists.userId] }.singleOrNull()
                 }
 
-                if (playlistUserId == null || playlistUserId != userId) {
+                if (playlistUserId != userId) {
                     return@put call.respond(
                         HttpStatusCode.BadRequest, FailureResponse("playlist_not_found", "Playlist not found")
                     )
@@ -108,9 +108,9 @@ fun getPlayListWithSongs(userId: UUID, playlistId: UUID): Playlist? {
         val playlistRow = Playlists.select { Playlists.id eq playlistId }.singleOrNull()
             ?: return@transaction null
 
-        val songs = PlaylistsSongs
+        val songs = PlaylistSongs
             .leftJoin(Songs)
-            .select { PlaylistsSongs.playlistId eq playlistId }
+            .select { PlaylistSongs.playlistId eq playlistId }
             .map { row ->
                 getSongWithArtistsAndFavorite(userId, row[Songs.id])!!
             }
@@ -128,10 +128,10 @@ fun getPlayListWithSongs(userId: UUID, playlistId: UUID): Playlist? {
     }
 }
 
-fun getPlaylistsWithSongs(userId: UUID): com.witelokk.models.ShortPlaylists {
+fun getPlaylists(userId: UUID): ShortPlaylists {
     val playlists = transaction {
         Playlists
-            .leftJoin(PlaylistsSongs)
+            .leftJoin(PlaylistSongs)
             .leftJoin(Songs)
             .slice(Playlists.fields + Songs.id.count())
             .select { Playlists.userId eq userId }

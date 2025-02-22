@@ -40,5 +40,6 @@ fun Application.module() {
         followingsRoutes()
         releasesRoutes()
         playlistsRoutes()
+        playlistSongsRoutes()
     }
 }

@@ -3,8 +3,10 @@ package com.witelokk.tables
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.jodatime.datetime
 
-object PlaylistsSongs: Table("playlists_songs") {
+object PlaylistSongs : Table("playlist_songs") {
     val playlistId = uuid("playlist_id").references(Playlists.id)
-    val songsId = uuid("songs_id").references(Songs.id)
+    val songId = uuid("song_id").references(Songs.id)
     val addedAt = datetime("added_at")
+
+    override val primaryKey = PrimaryKey(playlistId, songId)
 }
