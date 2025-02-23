@@ -3,10 +3,10 @@ services:
     image: ghcr.io/witelokk/music-api:main
     restart: unless-stopped
     environment:
-      DATABASE_URL: "postgresql://postgres/"
+      DATABASE_URL: "postgresql://music-api_postgres/"
       DATABASE_USER: "postgres"
       DATABASE_PASSWORD: "postgres"
-      REDIS_URL: "redis:5432"
+      REDIS_URL: "music-api_redis:6379"
       JWT_SECRET: ${JWT_SECRET}
       MAILGUN_API_KEY: ${MAILGUN_API_KEY}
       MAILGUN_DOMAIN: ${MAILGUN_DOMAIN}
@@ -26,8 +26,6 @@ services:
   redis:
     image: redis
     restart: unless-stopped
-    ports:
-      - "6379"
   nginx:
     image: ghcr.io/max-lt/nginx-jwt-module:latest
     restart: unless-stopped
@@ -44,10 +42,10 @@ services:
       - music-api
 
 configs:
-    nginx_conf:
-        file: ./nginx.conf
-    jwt_key:
-        file: ./jwt_key
+  nginx_conf:
+    file: ./nginx.conf
+  jwt_key:
+    file: ./local/jwt_key
 
 volumes:
   postgres_data:
