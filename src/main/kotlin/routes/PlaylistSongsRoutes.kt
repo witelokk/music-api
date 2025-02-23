@@ -7,6 +7,10 @@ import com.witelokk.models.FailureResponse
 import com.witelokk.models.RemoveSongFromPlaylistRequest
 import com.witelokk.tables.Playlists
 import com.witelokk.tables.PlaylistSongs
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
+import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -25,8 +29,22 @@ import java.util.*
 
 fun Route.playlistSongsRoutes() {
     authenticate("auth-jwt") {
-        route("/playlists/{id}/songs") {
-            get("/") {
+        route("/playlists/{id}/songs", {
+            tags = listOf("playlists")
+        }) {
+            get("/", {
+                description = "Get playlist songs"
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                        body<com.witelokk.models.Songs>()
+                    }
+                    HttpStatusCode.BadRequest to {
+                        description = "Bad request"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -53,7 +71,21 @@ fun Route.playlistSongsRoutes() {
                 call.respond(playlistSongs)
             }
 
-            post("/") {
+            post("/", {
+                description = "Add song to playlist"
+                request {
+                    body<AddSongToPlaylistRequest>()
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                    }
+                    HttpStatusCode.BadRequest to {
+                        description = "Bad request"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
                 val request = call.receive<AddSongToPlaylistRequest>()
@@ -78,12 +110,7 @@ fun Route.playlistSongsRoutes() {
                 }
 
                 try {
-                    addSongToPlaylist(playlistId, UUID.fromString(request.songId))
-                } catch (e: IllegalArgumentException) {
-                    return@post call.respond(
-                        HttpStatusCode.BadRequest,
-                        FailureResponse("song_not_fount", "Song not found")
-                    )
+                    addSongToPlaylist(playlistId, request.songId)
                 } catch (e: SQLException) {
                     if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
                         return@post call.respond(
@@ -107,7 +134,21 @@ fun Route.playlistSongsRoutes() {
                 call.respond(HttpStatusCode.OK)
             }
 
-            delete("/") {
+            delete("/", {
+                description = "Remove song from playlist"
+                request {
+                    body<RemoveSongFromPlaylistRequest>()
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                    }
+                    HttpStatusCode.BadRequest to {
+                        description = "Bad request"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
                 val request = call.receive<RemoveSongFromPlaylistRequest>()
@@ -131,12 +172,7 @@ fun Route.playlistSongsRoutes() {
                 }
 
                 try {
-                    removeSongFromPlaylist(playlistId, UUID.fromString(request.songId))
-                } catch (e: IllegalArgumentException) {
-                    return@delete call.respond(
-                        HttpStatusCode.BadRequest,
-                        FailureResponse("song_not_fount", "Song not found")
-                    )
+                    removeSongFromPlaylist(playlistId, request.songId)
                 } catch (e: Exception) {
                     println(e)
                     return@delete call.respond(

@@ -6,6 +6,10 @@ import com.witelokk.models.FailureResponse
 import com.witelokk.models.StartFollowingRequest
 import com.witelokk.models.StopFollowingRequest
 import com.witelokk.tables.*
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
+import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -24,8 +28,18 @@ import java.util.*
 
 fun Route.followingsRoutes() {
     authenticate("auth-jwt") {
-        route("/followings") {
-            get("/") {
+        route("/followings", {
+            tags = listOf("followings")
+        }) {
+            get("/", {
+                description = "Get a list of followed artists"
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                        body<com.witelokk.models.ShortArtists>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -36,18 +50,32 @@ fun Route.followingsRoutes() {
                 )
             }
 
-            post("/") {
+            post("/", {
+                description = "Start following an artist"
+                request {
+                    body<StartFollowingRequest>()
+                }
+                response {
+                    HttpStatusCode.Created to {
+                        description = "Success"
+                    }
+                    HttpStatusCode.BadRequest to {
+                        description = "Bad request"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
                 val request = call.receive<StartFollowingRequest>()
 
                 try {
-                    startFollowing(userId, UUID.fromString(request.artistId))
+                    startFollowing(userId, request.artistId)
                 } catch (e: SQLException) {
                     if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
                         return@post call.respond(
                             HttpStatusCode.BadRequest,
-                            FailureResponse("artist_not_fount", "Artist not found")
+                            FailureResponse("artist_not_found", "Artist not found")
                         )
                     } else if (e.sqlState == PG_UNIQUE_VIOLATION) {
                         return@post call.respond(
@@ -66,13 +94,23 @@ fun Route.followingsRoutes() {
                 call.respond(HttpStatusCode.Created)
             }
 
-            delete("/") {
+            delete("/", {
+                description = "Stop following an artist"
+                request {
+                    body<StopFollowingRequest>()
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
                 val request = call.receive<StopFollowingRequest>()
 
                 try {
-                    stopFollowing(userId, UUID.fromString(request.artistId))
+                    stopFollowing(userId, request.artistId)
                 } catch (e: Exception) {
                     println(e)
                     return@delete call.respond(
@@ -92,7 +130,7 @@ fun getFollowings(userId: UUID): List<ShortArtist> {
         Followers.innerJoin(Artists)
             .select { Followers.userId eq userId }
             .map { ShortArtist(
-                id = it[Artists.id].toString(),
+                id = it[Artists.id],
                 name = it[Artists.name],
                 avatarUrl = it[Artists.avatarUrl],
             ) }

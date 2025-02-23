@@ -5,6 +5,8 @@ import com.witelokk.models.CreateUserRequest
 import com.witelokk.models.FailureResponse
 import com.witelokk.tables.Users
 import io.github.crackthecodeabhi.kreds.connection.KredsClient
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
+import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -16,8 +18,28 @@ import java.sql.SQLException
 import java.util.*
 
 fun Route.userRoutes(redis: KredsClient) {
-    route("/users") {
-        post("/") {
+    route("/users", {
+        tags = listOf("users")
+    }) {
+        post("/", {
+            description = "Create a user"
+            request {
+                body<CreateUserRequest>()
+            }
+            response {
+                HttpStatusCode.Created to {
+                    description = "Success"
+                }
+                HttpStatusCode.BadRequest to {
+                    description = "Bad request"
+                    body<FailureResponse>()
+                }
+                HttpStatusCode.Conflict to {
+                    description = "User already exists"
+                    body<FailureResponse>()
+                }
+            }
+        }) {
             val request = call.receive<CreateUserRequest>()
 
             redis.use { client ->

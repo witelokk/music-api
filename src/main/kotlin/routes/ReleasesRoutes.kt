@@ -5,6 +5,8 @@ import com.witelokk.models.Release
 import com.witelokk.models.ShortArtists
 import com.witelokk.models.Songs
 import com.witelokk.tables.*
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -17,8 +19,27 @@ import java.util.*
 
 fun Route.releasesRoutes() {
     authenticate("auth-jwt") {
-        route("/releases") {
-            get("/{id}") {
+        route("/releases", {
+            tags = listOf("releases")
+        }) {
+            get("/{id}", {
+                description = "Get release by ID"
+                request {
+                    pathParameter<String>("id") {
+                        description = "Release ID"
+                    }
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                        body<Release>()
+                    }
+                    HttpStatusCode.NotFound to {
+                        description = "Release not found"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -49,7 +70,7 @@ fun getReleaseWithArtist(userId: UUID, releaseId: UUID): Release? {
             .select { ReleaseArtists.releaseId eq releaseId }
             .map { artistRow ->
                 ShortArtist(
-                    id = artistRow[Artists.id].toString(),
+                    id = artistRow[Artists.id],
                     name = artistRow[Artists.name],
                     avatarUrl = artistRow[Artists.avatarUrl]
                 )
@@ -60,11 +81,11 @@ fun getReleaseWithArtist(userId: UUID, releaseId: UUID): Release? {
             .map { getSongWithArtistsAndFavorite(it[ReleaseSongs.songId], userId)!! }
 
         Release(
-            id = release[Releases.id].toString(),
+            id = release[Releases.id],
             name = release[Releases.name],
             coverUrl = release[Releases.coverUrl],
             type = release[Releases.type].name,
-            releasedAt = release[Releases.releasedAt].toString(),
+            releasedAt = release[Releases.releasedAt],
             songs = Songs(
                 count = songs.size,
                 songs = songs

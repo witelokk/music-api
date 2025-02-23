@@ -4,10 +4,15 @@ import com.witelokk.PG_FOREIGN_KEY_VIOLATION
 import com.witelokk.PG_UNIQUE_VIOLATION
 import com.witelokk.models.AddFavoriteSongRequest
 import com.witelokk.models.FailureResponse
+import com.witelokk.models.RemoveFavoriteSongRequest
 import com.witelokk.tables.Artists
 import com.witelokk.tables.Favorites
 import com.witelokk.tables.SongArtists
 import com.witelokk.tables.Songs
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
+import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -28,8 +33,18 @@ import java.util.*
 
 fun Route.favoriteRoutes() {
     authenticate("auth-jwt") {
-        route("/favorites") {
-            get("/") {
+        route("/favorites", {
+            tags = listOf("favorites")
+        }) {
+            get("/", {
+                description = "Get favorite songs"
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                        body<com.witelokk.models.Songs>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -40,18 +55,27 @@ fun Route.favoriteRoutes() {
                 )
             }
 
-            post("/") {
+            post("/", {
+                description = "Add favorite song"
+                request {
+                    body<AddFavoriteSongRequest>()
+                }
+                response {
+                    HttpStatusCode.Created to {
+                        description = "Success"
+                    }
+                    HttpStatusCode.BadRequest to {
+                        description = "Bad Request"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
                 val request = call.receive<AddFavoriteSongRequest>()
 
                 try {
-                    addFavoriteSong(userId, UUID.fromString(request.songId))
-                } catch (e: IllegalArgumentException) {
-                    return@post call.respond(
-                        HttpStatusCode.BadRequest,
-                        FailureResponse("song_not_fount", "Song not found")
-                    )
+                    addFavoriteSong(userId, request.songId)
                 } catch (e: SQLException) {
                     if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
                         return@post call.respond(
@@ -75,18 +99,23 @@ fun Route.favoriteRoutes() {
                 call.respond(HttpStatusCode.Created)
             }
 
-            delete("/") {
+            delete("/", {
+                description = "Remove favorite song"
+                request {
+                    body<RemoveFavoriteSongRequest>()
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
-                val request = call.receive<AddFavoriteSongRequest>()
+                val request = call.receive<RemoveFavoriteSongRequest>()
 
                 try {
-                    removeFavoriteSong(userId, UUID.fromString(request.songId))
-                } catch (e: IllegalArgumentException) {
-                    return@delete call.respond(
-                        HttpStatusCode.BadRequest,
-                        FailureResponse("song_not_fount", "Song not found")
-                    )
+                    removeFavoriteSong(userId, request.songId)
                 } catch (e: Exception) {
                     println(e)
                     return@delete call.respond(
@@ -114,14 +143,14 @@ fun getFavoriteSongs(userId: UUID): List<Song> {
                 .select { SongArtists.songId eq songId }
                 .map { artistRow ->
                     ShortArtist(
-                        id = artistRow[Artists.id].toString(),
+                        id = artistRow[Artists.id],
                         name = artistRow[Artists.name],
                         avatarUrl = artistRow[Artists.avatarUrl]
                     )
                 }
 
             Song(
-                id = songRow[Songs.id].toString(),
+                id = songRow[Songs.id],
                 name = songRow[Songs.name],
                 coverUrl = songRow[Songs.coverUrl],
                 isFavorite = true,

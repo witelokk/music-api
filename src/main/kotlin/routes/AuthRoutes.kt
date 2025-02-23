@@ -8,6 +8,7 @@ import com.witelokk.models.TokensRequest
 import com.witelokk.models.TokensResponse
 import com.witelokk.tables.Users
 import io.github.crackthecodeabhi.kreds.connection.KredsClient
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -38,7 +39,23 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
         return payload.email to payload["name"] as? String
     }
 
-    post("/tokens") {
+    post("/tokens", {
+        tags = listOf("auth")
+        description = "Get tokens"
+        request {
+            body<TokensRequest>()
+        }
+        response {
+            HttpStatusCode.Created to {
+                description = "Success"
+                body<TokensResponse>()
+            }
+            HttpStatusCode.BadRequest to {
+                description = "Bad request"
+                body<FailureResponse>()
+            }
+        }
+    }) {
         val request = call.receive<TokensRequest>()
 
         val (email, name) = when (request.grantType) {

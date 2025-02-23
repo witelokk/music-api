@@ -5,6 +5,8 @@ import com.witelokk.tables.Artists
 import com.witelokk.tables.Favorites
 import com.witelokk.tables.SongArtists
 import com.witelokk.tables.Songs
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -18,8 +20,27 @@ import java.util.UUID
 
 fun Route.songsRoutes() {
     authenticate("auth-jwt") {
-        route("/songs") {
-            get("/{id}") {
+        route("/songs", {
+            tags = listOf("songs")
+        }) {
+            get("/{id}", {
+                description = "Get song by ID"
+                request {
+                    pathParameter<String>("id") {
+                        description = "Song ID"
+                    }
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                        body<Song>()
+                    }
+                    HttpStatusCode.NotFound to {
+                        description = "Song not found"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -50,7 +71,7 @@ fun getSongWithArtistsAndFavorite(songId: UUID, userId: UUID?): Song? {
             .select { SongArtists.songId eq songId }
             .map { artistRow ->
                 ShortArtist(
-                    id = artistRow[Artists.id].toString(),
+                    id = artistRow[Artists.id],
                     name = artistRow[Artists.name],
                     avatarUrl = artistRow[Artists.avatarUrl]
                 )
@@ -62,7 +83,7 @@ fun getSongWithArtistsAndFavorite(songId: UUID, userId: UUID?): Song? {
         } ?: false
 
         Song(
-            id = songRow[Songs.id].toString(),
+            id = songRow[Songs.id],
             name = songRow[Songs.name],
             coverUrl = songRow[Songs.coverUrl],
             isFavorite = isFavorite,

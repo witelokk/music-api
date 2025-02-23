@@ -6,6 +6,9 @@ import com.google.api.client.json.gson.GsonFactory
 import com.witelokk.routes.*
 import io.github.crackthecodeabhi.kreds.connection.Endpoint
 import io.github.crackthecodeabhi.kreds.connection.newClient
+import io.github.smiley4.ktorswaggerui.SwaggerUI
+import io.github.smiley4.ktorswaggerui.routing.openApiSpec
+import io.github.smiley4.ktorswaggerui.routing.swaggerUI
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 
@@ -32,6 +35,7 @@ fun Application.module() {
 
     configureAuth(jwtSecret)
     configureSerialization()
+    configureSwagger()
 
     val tokenVerifier = GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory())
         .setAudience(googleAuthAudience)
@@ -49,5 +53,12 @@ fun Application.module() {
         releasesRoutes()
         playlistsRoutes()
         playlistSongsRoutes()
+
+        route("api.json") {
+            openApiSpec()
+        }
+        route("swagger") {
+            swaggerUI("/api.json")
+        }
     }
 }

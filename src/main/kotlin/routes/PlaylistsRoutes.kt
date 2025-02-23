@@ -4,6 +4,10 @@ import com.witelokk.models.*
 import com.witelokk.tables.Playlists
 import com.witelokk.tables.PlaylistSongs
 import com.witelokk.tables.Songs
+import io.github.smiley4.ktorswaggerui.dsl.routing.delete
+import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
+import io.github.smiley4.ktorswaggerui.dsl.routing.route
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -18,8 +22,27 @@ import java.util.*
 
 fun Route.playlistsRoutes() {
     authenticate("auth-jwt") {
-        route("/playlists") {
-            get("/{id}") {
+        route("/playlists", {
+            tags = listOf("playlists")
+        }) {
+            get("/{id}", {
+                description = "Get playlist by ID"
+                request {
+                    pathParameter<String>("id") {
+                        description = "Playlist ID"
+                    }
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                        body<Playlist>()
+                    }
+                    HttpStatusCode.NotFound to {
+                        description = "Playlist not found"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -40,7 +63,15 @@ fun Route.playlistsRoutes() {
                 call.respond(playlist)
             }
 
-            get("/") {
+            get("/", {
+                description = "Get a list of playlists"
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                        body<ShortPlaylists>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -49,17 +80,44 @@ fun Route.playlistsRoutes() {
                 call.respond(playlists)
             }
 
-            post("/") {
+            post("/", {
+                description = "Create a new playlist"
+                request {
+                    body<CreatePlaylistRequest>()
+                }
+                response {
+                    HttpStatusCode.Created to {
+                        description = "Success"
+                        body<CreatePlaylistResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
                 val request = call.receive<CreatePlaylistRequest>()
 
                 val id = UUID.randomUUID()
                 createPlaylist(id, userId, request)
-                call.respond(HttpStatusCode.Created, CreatePlaylistResponse(id.toString()))
+                call.respond(HttpStatusCode.Created, CreatePlaylistResponse(id))
             }
 
-            delete("/{id}") {
+            delete("/{id}", {
+                description = "Delete a playlist"
+                request {
+                    pathParameter<String>("id") {
+                        description = "Playlist ID"
+                    }
+                }
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Success"
+                    }
+                    HttpStatusCode.BadRequest to {
+                        description = "Bad request"
+                        body<FailureResponse>()
+                    }
+                }
+            }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
 
@@ -67,7 +125,7 @@ fun Route.playlistsRoutes() {
                     UUID.fromString(call.parameters["id"])
                 } catch (e: IllegalArgumentException) {
                     return@delete call.respond(
-                        HttpStatusCode.NotFound, FailureResponse("playlist_not_found", "Playlist not found")
+                        HttpStatusCode.BadRequest, FailureResponse("playlist_not_found", "Playlist not found")
                     )
                 }
 
@@ -116,7 +174,7 @@ fun getPlayListWithSongs(userId: UUID, playlistId: UUID): Playlist? {
             }
 
         Playlist(
-            id = playlistRow[Playlists.id].toString(),
+            id = playlistRow[Playlists.id],
             name = playlistRow[Playlists.name],
             coverUrl = null, // TODO: implement
             songsCount = songs.size,
@@ -138,7 +196,7 @@ fun getPlaylists(userId: UUID): ShortPlaylists {
             .groupBy(*Playlists.fields.toTypedArray())
             .map {
                 ShortPlaylist(
-                    id = it[Playlists.id].toString(),
+                    id = it[Playlists.id],
                     name = it[Playlists.name],
                     coverUrl = null, // TODO: implement
                     songsCount = it[Songs.id.count()].toInt(),

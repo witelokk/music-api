@@ -1,8 +1,10 @@
 package com.witelokk.models
 
+import com.witelokk.UUIDSerializer
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 @Serializable
 data class CreatePlaylistResponse(
-    val id: String,
+    @Serializable(UUIDSerializer::class) val id: UUID,
 )

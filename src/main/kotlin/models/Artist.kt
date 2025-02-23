@@ -1,11 +1,13 @@
 package models
 
+import com.witelokk.UUIDSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.util.*
 
 @Serializable
 data class Artist(
-    val id: String,
+    @Serializable(UUIDSerializer::class) val id: UUID,
     val name: String,
     @SerialName("avatar_url") val avatarUrl: String?,
     @SerialName("cover_url") val coverUrl: String?,

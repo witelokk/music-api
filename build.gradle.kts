@@ -40,5 +40,9 @@ dependencies {
     implementation("io.ktor:ktor-server-auth:3.0.3")
     implementation("io.ktor:ktor-server-auth-jwt:3.0.3")
     implementation("com.google.api-client:google-api-client:2.7.2")
-//    implementation("com.google.auth:google-auth-library-oauth2-http:1.22.0")
+    implementation("io.github.smiley4:ktor-swagger-ui:4.1.6")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+    implementation("io.github.smiley4:schema-kenerator-core:1.6.5")
+    implementation("io.github.smiley4:schema-kenerator-serialization:1.6.5")
+    implementation("io.github.smiley4:schema-kenerator-swagger:1.6.5")
 }

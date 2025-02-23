@@ -7,6 +7,7 @@ import com.witelokk.models.VerificationCodeRequest
 import io.github.crackthecodeabhi.kreds.connection.Endpoint
 import io.github.crackthecodeabhi.kreds.connection.KredsClient
 import io.github.crackthecodeabhi.kreds.connection.newClient
+import io.github.smiley4.ktorswaggerui.dsl.routing.post
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -19,7 +20,22 @@ val SEND_NEW_CODE_AFTER = Duration.parse("2m")
 val CODE_TTL = Duration.parse("10m")
 
 fun Route.verificationRoutes(redis: KredsClient, emailSender: EmailSender) {
-    post("/verification-code-request") {
+    post("/verification-code-request", {
+        tags = listOf("auth")
+        description = "Request a verification code"
+        request {
+            body<VerificationCodeRequest>()
+        }
+        response {
+            HttpStatusCode.Created to {
+                description = "Success"
+            }
+            HttpStatusCode.TooManyRequests to {
+                description = "Too many verification requests"
+                body<FailureResponse>()
+            }
+        }
+    }) {
         val request = call.receive<VerificationCodeRequest>()
 
         // generate and save verification code

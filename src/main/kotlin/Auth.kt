@@ -2,6 +2,7 @@ package com.witelokk
 
 import com.auth0.jwt.*
 import com.auth0.jwt.algorithms.*
+import com.witelokk.models.FailureResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -23,7 +24,10 @@ fun Application.configureAuth(secret: String) {
                 }
             }
             challenge { defaultScheme, realm ->
-                call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired")
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    FailureResponse("unauthorized", "Token is not valid or has expired")
+                )
             }
 
         }
