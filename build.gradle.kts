@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.plugin.serialization)
 }
 
-group = "com.witelokk"
+group = "com.witelokk.music"
 version = "0.0.1"
 
 application {
