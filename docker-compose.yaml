@@ -1,6 +1,6 @@
 services:
   music-api:
-    build: .
+    image: ghcr.io/witelokk/music-api:main
     environment:
       DATABASE_URL: "postgresql://postgres/"
       DATABASE_USER: "postgres"
@@ -29,12 +29,22 @@ services:
     image: ghcr.io/max-lt/nginx-jwt-module:latest
     ports:
       - "8080:80"
+    configs:
+      - source: nginx_conf
+        target: /etc/nginx/nginx.conf
+      - source: jwt_key
+        target: /etc/nginx/jwt_key
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./local/jwt_key:/etc/nginx/jwt_key:ro
-      - ./local/content:/var/www/files:ro
+      - content:/var/www/files:ro
     depends_on:
       - music-api
 
+configs:
+    nginx_conf:
+        file: ./nginx.conf
+    jwt_key:
+        file: ./jwt_key
+
 volumes:
   postgres_data:
+  content:
