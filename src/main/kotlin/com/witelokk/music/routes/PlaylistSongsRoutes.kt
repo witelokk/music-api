@@ -32,6 +32,11 @@ fun Route.playlistSongsRoutes() {
     authenticate("auth-jwt") {
         route("/playlists/{id}/songs", {
             tags = listOf("playlists")
+            request {
+                pathParameter<String>("id") {
+                    description = "Playlist ID"
+                }
+            }
         }) {
             get("/", {
                 description = "Get playlist songs"
