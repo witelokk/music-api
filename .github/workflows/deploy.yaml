@@ -33,4 +33,11 @@ jobs:
       - name: Deploy to Docker Swarm
         run: |
           docker context use my-swarm
+          
+          export MAILGUN_API_KEY="${{ secrets.MAILGUN_API_KEY }}"
+          export MAILGUN_FROM="${{ secrets.MAILGUN_FROM }}"
+          export MAILGUN_DOMAIN="${{ secrets.MAILGUN_DOMAIN }}"
+          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          export GOOGLE_AUTH_AUDIENCE="${{ secrets.GOOGLE_AUTH_AUDIENCE }}"
+          
           docker stack deploy -c docker-compose.yml your-stack-name
