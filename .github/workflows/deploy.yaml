@@ -27,13 +27,18 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
+      - name: Add SSH key to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
       - name: Create jwt_key file
         run: |
           mkdir -p ./local
           echo -n ${{ secrets.JWT_SECRET }} > ./local/jwt_key
 
       - name: Set up Docker tools
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
         with:
           version: latest
 
@@ -52,4 +57,4 @@ jobs:
           export JWT_SECRET="${{ secrets.JWT_SECRET }}"
           export GOOGLE_AUTH_AUDIENCE="${{ secrets.GOOGLE_AUTH_AUDIENCE }}"
           
-          docker stack deploy -c docker-compose.yml music-api --with-registry-auth
+          docker stack deploy -c docker-compose.yml music-api --with-registry-auth --detach=false
