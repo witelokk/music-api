@@ -38,7 +38,7 @@ fun Route.playlistSongsRoutes() {
                 }
             }
         }) {
-            get("/", {
+            get({
                 description = "Get playlist songs"
                 response {
                     HttpStatusCode.OK to {
@@ -77,7 +77,7 @@ fun Route.playlistSongsRoutes() {
                 call.respond(playlistSongs)
             }
 
-            post("/", {
+            post({
                 description = "Add song to playlist"
                 request {
                     body<AddSongToPlaylistRequest>()
@@ -140,7 +140,7 @@ fun Route.playlistSongsRoutes() {
                 call.respond(HttpStatusCode.OK)
             }
 
-            delete("/", {
+            delete({
                 description = "Remove song from playlist"
                 request {
                     body<RemoveSongFromPlaylistRequest>()

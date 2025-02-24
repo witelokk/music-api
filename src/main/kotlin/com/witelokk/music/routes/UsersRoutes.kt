@@ -21,7 +21,7 @@ fun Route.userRoutes(redis: KredsClient) {
     route("/users", {
         tags = listOf("users")
     }) {
-        post("/", {
+        post({
             description = "Create a user"
             request {
                 body<CreateUserRequest>()

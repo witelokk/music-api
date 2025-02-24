@@ -33,7 +33,7 @@ fun Route.favoriteRoutes() {
         route("/favorites", {
             tags = listOf("favorites")
         }) {
-            get("/", {
+            get({
                 description = "Get favorite songs"
                 response {
                     HttpStatusCode.OK to {
@@ -52,7 +52,7 @@ fun Route.favoriteRoutes() {
                 )
             }
 
-            post("/", {
+            post({
                 description = "Add favorite song"
                 request {
                     body<AddFavoriteSongRequest>()
@@ -96,7 +96,7 @@ fun Route.favoriteRoutes() {
                 call.respond(HttpStatusCode.Created)
             }
 
-            delete("/", {
+            delete({
                 description = "Remove favorite song"
                 request {
                     body<RemoveFavoriteSongRequest>()

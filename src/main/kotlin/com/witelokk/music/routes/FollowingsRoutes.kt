@@ -33,7 +33,7 @@ fun Route.followingsRoutes() {
         route("/followings", {
             tags = listOf("followings")
         }) {
-            get("/", {
+            get({
                 description = "Get a list of followed artists"
                 response {
                     HttpStatusCode.OK to {
@@ -52,7 +52,7 @@ fun Route.followingsRoutes() {
                 )
             }
 
-            post("/", {
+            post({
                 description = "Start following an artist"
                 request {
                     body<StartFollowingRequest>()
@@ -96,7 +96,7 @@ fun Route.followingsRoutes() {
                 call.respond(HttpStatusCode.Created)
             }
 
-            delete("/", {
+            delete({
                 description = "Stop following an artist"
                 request {
                     body<StopFollowingRequest>()

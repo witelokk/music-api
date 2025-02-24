@@ -60,7 +60,7 @@ fun Route.playlistsRoutes() {
                 call.respond(playlist)
             }
 
-            get("/", {
+            get({
                 description = "Get a list of playlists"
                 response {
                     HttpStatusCode.OK to {
@@ -77,7 +77,7 @@ fun Route.playlistsRoutes() {
                 call.respond(playlists)
             }
 
-            post("/", {
+            post({
                 description = "Create a new playlist"
                 request {
                     body<CreatePlaylistRequest>()
