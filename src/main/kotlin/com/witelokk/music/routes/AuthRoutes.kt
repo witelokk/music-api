@@ -29,7 +29,6 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
             if (!isCodeValid) {
                 return null
             }
-            client.del("verification:${email}:${code}")
             return email
         }
     }

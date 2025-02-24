@@ -48,8 +48,6 @@ fun Route.userRoutes(redis: KredsClient) {
                 if (!isCodeValid) {
                     return@post call.respond(HttpStatusCode.BadRequest, FailureResponse("invalid_code", "Invalid code"))
                 }
-
-                client.del("verification:${request.email}:${request.code}")
             }
 
             // create a record in the database
