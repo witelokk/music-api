@@ -3,7 +3,7 @@ name: Deploy Docker Compose to Server
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [ "docker-push" ]
+    workflows: [ Docker ]
     types:
       - completed
 

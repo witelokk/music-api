@@ -45,6 +45,16 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
         request {
             body<TokensRequest>()
         }
+        response {
+            HttpStatusCode.Created to {
+                description = "Success"
+                body<TokensResponse>()
+            }
+            HttpStatusCode.BadRequest to {
+                description = "Bad request"
+                body<FailureResponse>()
+            }
+        }
     }) {
         val request = call.receive<TokensRequest>()
 
