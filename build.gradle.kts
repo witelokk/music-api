@@ -45,4 +45,5 @@ dependencies {
     implementation("io.github.smiley4:schema-kenerator-core:1.6.5")
     implementation("io.github.smiley4:schema-kenerator-serialization:1.6.5")
     implementation("io.github.smiley4:schema-kenerator-swagger:1.6.5")
+    implementation("io.ktor:ktor-server-call-logging:3.0.3")
 }

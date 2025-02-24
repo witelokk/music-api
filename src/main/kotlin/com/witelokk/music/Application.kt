@@ -35,6 +35,7 @@ fun Application.module() {
     configureAuth(jwtSecret)
     configureSerialization()
     configureSwagger()
+    configureLogging()
 
     val tokenVerifier = GoogleIdTokenVerifier.Builder(NetHttpTransport(), GsonFactory())
         .setAudience(googleAuthAudience)
