@@ -1,6 +1,7 @@
 package com.witelokk.music
 
 import com.witelokk.music.models.FailureResponse
+import com.witelokk.music.models.ShortArtist
 import io.github.smiley4.ktorswaggerui.SwaggerUI
 import io.github.smiley4.ktorswaggerui.data.AuthScheme
 import io.github.smiley4.ktorswaggerui.data.AuthType
@@ -54,6 +55,7 @@ fun Application.configureSwagger() {
                                 )
                             )
                         }
+                        markNotParameterized<ShortArtist>()
                     }
                     .generateSwaggerSchema()
                     .handleCoreAnnotations()
