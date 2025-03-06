@@ -22,7 +22,7 @@ data class LogData(
 
 fun Application.configureLogging() {
     install(CallLogging) {
-        level = Level.INFO
+        level = Level.DEBUG
         format { call ->
             val statusCode = call.response.status()?.value
 

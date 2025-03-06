@@ -68,10 +68,11 @@ private fun getArtistWithFollowing(artistId: UUID, userId: UUID): Artist? {
         }
     ).alias("following")
 
-    return Artists.leftJoin(Followers).slice(
-        Artists.id, Artists.name, Artists.coverUrl, Artists.avatarUrl, Followers.userId.count(), followingAlias
+    val q = Artists.leftJoin(Followers).slice(
+//        Artists.id, Artists.name, Artists.coverUrl, Artists.avatarUrl, Followers.userId.count(), followingAlias
+        Artists.fields + Followers.userId.count() + followingAlias
     ).select { Artists.id eq artistId }
-        .groupBy(Artists.id, Artists.name, Artists.coverUrl, Artists.avatarUrl).map {
+        .groupBy(*Artists.fields.toTypedArray()).map {
             Artist(
                 id = it[Artists.id],
                 name = it[Artists.name],
@@ -80,5 +81,9 @@ private fun getArtistWithFollowing(artistId: UUID, userId: UUID): Artist? {
                 followers = it[Followers.userId.count()].toInt() ?: 0,
                 following = it[followingAlias]
             )
-        }.singleOrNull()
+        }
+
+    println(q)
+
+    return q.singleOrNull()
 }

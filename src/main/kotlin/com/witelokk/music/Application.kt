@@ -53,6 +53,7 @@ fun Application.module() {
         releasesRoutes()
         playlistsRoutes()
         playlistSongsRoutes()
+        searchRoutes()
 
         route("api.json") {
             openApiSpec()
