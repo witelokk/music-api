@@ -13,4 +13,6 @@ data class Artist(
     @SerialName("cover_url") val coverUrl: String?,
     val followers: Int,
     val following: Boolean,
+    val popularSongs: Songs,
+    val releases: Releases,
 )

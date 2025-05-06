@@ -1,8 +1,6 @@
 package com.witelokk.music.routes
 
 import com.witelokk.music.models.FailureResponse
-import com.witelokk.music.tables.Artists
-import com.witelokk.music.tables.Followers
 import io.github.smiley4.ktoropenapi.route
 import io.github.smiley4.ktoropenapi.get
 import io.ktor.http.*
@@ -11,6 +9,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.witelokk.music.models.Artist
+import com.witelokk.music.tables.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
@@ -50,7 +49,7 @@ fun Route.artistsRoutes() {
                 }
 
                 val artist = transaction {
-                    getArtistWithFollowing(artistId, userId)
+                    getArtistWithFollowingAndPopularSongAndRecentReleases(artistId, userId)
                 } ?: return@get call.respond(
                     HttpStatusCode.NotFound, FailureResponse("artist_not_found", "Artist not found")
                 )
@@ -61,12 +60,23 @@ fun Route.artistsRoutes() {
     }
 }
 
-private fun getArtistWithFollowing(artistId: UUID, userId: UUID): Artist? {
+private fun getArtistWithFollowingAndPopularSongAndRecentReleases(artistId: UUID, userId: UUID): Artist? {
     val followingAlias = exists(
         Followers.select {
             (Followers.artistId eq artistId) and (Followers.userId eq userId)
         }
     ).alias("following")
+
+    val popularSongs =
+        SongArtists.leftJoin(Songs).select { SongArtists.artistId eq artistId }.limit(5)
+            .sortedBy { Songs.streamsCount }
+            .map {
+                getSongWithArtistsAndFavorite(it[SongArtists.songId], userId)
+            }.filter { it != null }.map { it!! }
+    val releases =
+        ReleaseArtists.leftJoin(Releases).select { ReleaseArtists.artistId eq artistId }.map {
+            getReleaseWithArtist(userId, it[ReleaseArtists.releaseId])
+        }.filter { it != null }.map { it!! }
 
     val q = Artists.leftJoin(Followers).slice(
 //        Artists.id, Artists.name, Artists.coverUrl, Artists.avatarUrl, Followers.userId.count(), followingAlias
@@ -79,11 +89,17 @@ private fun getArtistWithFollowing(artistId: UUID, userId: UUID): Artist? {
                 avatarUrl = it[Artists.avatarUrl],
                 coverUrl = it[Artists.coverUrl],
                 followers = it[Followers.userId.count()].toInt() ?: 0,
-                following = it[followingAlias]
+                following = it[followingAlias],
+                popularSongs = com.witelokk.music.models.Songs(
+                    count = popularSongs.size,
+                    songs = popularSongs,
+                ),
+                releases = com.witelokk.music.models.Releases(
+                    count = releases.size,
+                    releases = releases,
+                )
             )
         }
-
-    println(q)
 
     return q.singleOrNull()
 }

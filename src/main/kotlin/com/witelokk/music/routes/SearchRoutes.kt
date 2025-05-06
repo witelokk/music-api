@@ -2,6 +2,7 @@ package com.witelokk.music.routes
 
 import com.witelokk.music.models.*
 import com.witelokk.music.tables.*
+import com.witelokk.music.tables.Releases
 import com.witelokk.music.tables.Songs
 import io.ktor.http.*
 import io.ktor.server.response.*
