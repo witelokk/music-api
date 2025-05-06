@@ -8,8 +8,8 @@ import io.ktor.server.response.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.routing.*
-import io.github.smiley4.ktorswaggerui.dsl.routing.route
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
+import io.github.smiley4.ktoropenapi.route
+import io.github.smiley4.ktoropenapi.get
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*

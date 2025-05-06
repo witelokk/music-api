@@ -6,9 +6,14 @@ import com.google.api.client.json.gson.GsonFactory
 import com.witelokk.music.routes.*
 import io.github.crackthecodeabhi.kreds.connection.Endpoint
 import io.github.crackthecodeabhi.kreds.connection.newClient
-import io.github.smiley4.ktorswaggerui.routing.openApiSpec
-import io.github.smiley4.ktorswaggerui.routing.swaggerUI
+import io.github.smiley4.ktoropenapi.OpenApiPlugin
+import io.github.smiley4.ktoropenapi.config.OpenApiPluginConfig
+import io.github.smiley4.ktoropenapi.config.OutputFormat
+import io.github.smiley4.ktoropenapi.route
+import io.github.smiley4.ktorswaggerui.swaggerUI
+import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun main(args: Array<String>) {
@@ -55,9 +60,21 @@ fun Application.module() {
         playlistSongsRoutes()
         searchRoutes()
 
-        route("api.json") {
-            openApiSpec()
+        route("api.json", { hidden = true }) {
+            get {
+                val contentType = when (OpenApiPlugin.getOpenApiSpecFormat(OpenApiPluginConfig.DEFAULT_SPEC_ID)) {
+                    OutputFormat.JSON -> ContentType.Application.Json
+                    OutputFormat.YAML -> ContentType.Text.Plain
+                }
+
+                val openApiSpec =
+                    OpenApiPlugin.getOpenApiSpec(OpenApiPluginConfig.DEFAULT_SPEC_ID)
+                        .replace("com.witelokk.music.models.", "")
+
+                call.respondText(contentType, HttpStatusCode.OK) { openApiSpec }
+            }
         }
+
         route("swagger") {
             swaggerUI("/api.json")
         }

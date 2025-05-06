@@ -4,8 +4,8 @@ import com.witelokk.music.models.FailureResponse
 import com.witelokk.music.models.Release
 import com.witelokk.music.models.ShortArtists
 import com.witelokk.music.models.Songs
-import io.github.smiley4.ktorswaggerui.dsl.routing.get
-import io.github.smiley4.ktorswaggerui.dsl.routing.route
+import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.route
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
