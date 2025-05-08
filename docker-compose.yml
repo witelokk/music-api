@@ -16,7 +16,7 @@ services:
       - postgres
       - redis
   postgres:
-    image: postgres:13
+    image: postgres:17
     restart: unless-stopped
     environment:
       POSTGRES_USERNAME: postgres
