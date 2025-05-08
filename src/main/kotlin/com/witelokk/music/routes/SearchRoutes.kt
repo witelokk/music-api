@@ -79,7 +79,7 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
                     val artists = SongArtists.innerJoin(Artists)
                         .select { SongArtists.songId eq songId }
                         .map {
-                            ShortArtist(
+                            AristSummary(
                                 id = it[Artists.id],
                                 name = it[Artists.name],
                                 avatarUrl = it[Artists.avatarUrl]
@@ -115,7 +115,7 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
                     val artists = ReleaseArtists.innerJoin(Artists)
                         .select { ReleaseArtists.releaseId eq releaseId }
                         .map {
-                            ShortArtist(
+                            AristSummary(
                                 id = it[Artists.id],
                                 name = it[Artists.name],
                                 avatarUrl = it[Artists.avatarUrl]
@@ -124,13 +124,13 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
 
                     SearchResultItem(
                         type = "release",
-                        release = ShortRelease(
+                        release = ReleaseSummary(
                             id = releaseId,
                             name = row[Releases.name],
                             coverUrl = row[Releases.coverUrl],
                             type = row[Releases.type].name,
                             releasedAt = row[Releases.releasedAt],
-                            artists = ShortArtists(artists.size, artists)
+                            artists = ArtistsSummary(artists.size, artists)
                         )
                     )
                 }
@@ -141,7 +141,7 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
                 .map { row ->
                     SearchResultItem(
                         type = "artist",
-                        artist = ShortArtist(
+                        artist = AristSummary(
                             id = row[Artists.id],
                             name = row[Artists.name],
                             avatarUrl = row[Artists.avatarUrl]
@@ -161,7 +161,7 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
 
                     SearchResultItem(
                         type = "playlist",
-                        playlist = ShortPlaylist(
+                        playlist = PlaylistSummary(
                             id = playlistId,
                             name = row[Playlists.name],
                             coverUrl = null,

@@ -17,7 +17,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import com.witelokk.music.models.ShortArtist
+import com.witelokk.music.models.AristSummary
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
@@ -139,7 +139,7 @@ fun getFavoriteSongs(userId: UUID): List<Song> {
             val artists = (SongArtists innerJoin Artists)
                 .select { SongArtists.songId eq songId }
                 .map { artistRow ->
-                    ShortArtist(
+                    AristSummary(
                         id = artistRow[Artists.id],
                         name = artistRow[Artists.name],
                         avatarUrl = artistRow[Artists.avatarUrl]

@@ -15,15 +15,12 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import com.witelokk.music.models.ShortArtist
-import com.witelokk.music.models.ShortArtists
+import com.witelokk.music.models.AristSummary
+import com.witelokk.music.models.ArtistsSummary
 import com.witelokk.music.tables.Artists
 import com.witelokk.music.tables.Followers
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.sql.SQLException
 import java.util.*
@@ -38,7 +35,7 @@ fun Route.followingsRoutes() {
                 response {
                     HttpStatusCode.OK to {
                         description = "Success"
-                        body<ShortArtists>()
+                        body<ArtistsSummary>()
                     }
                 }
             }) {
@@ -48,7 +45,7 @@ fun Route.followingsRoutes() {
                 val followings = getFollowings(userId)
 
                 call.respond(
-                    ShortArtists(count = followings.count(), artists = followings),
+                    ArtistsSummary(count = followings.count(), artists = followings),
                 )
             }
 
@@ -127,15 +124,28 @@ fun Route.followingsRoutes() {
     }
 }
 
-fun getFollowings(userId: UUID): List<ShortArtist> {
+fun getFollowings(userId: UUID): List<AristSummary> {
     return transaction {
-        Followers.innerJoin(Artists)
-            .select { Followers.userId eq userId }
-            .map { ShortArtist(
-                id = it[Artists.id],
-                name = it[Artists.name],
-                avatarUrl = it[Artists.avatarUrl],
-            ) }
+        (Followers innerJoin Artists)
+            .slice(
+                Artists.id,
+                Artists.name,
+                Artists.avatarUrl,
+                Artists.coverUrl,
+                Followers.artistId.count() // Count followers per artist
+            )
+            .select { Followers.artistId inSubQuery
+                    Followers.slice(Followers.artistId)
+                        .select { Followers.userId eq userId }
+            }
+            .groupBy(Artists.id, Artists.name, Artists.avatarUrl, Artists.coverUrl)
+            .map {
+                AristSummary(
+                    id = it[Artists.id],
+                    name = it[Artists.name],
+                    avatarUrl = it[Artists.avatarUrl],
+                )
+            }
     }
 }
 

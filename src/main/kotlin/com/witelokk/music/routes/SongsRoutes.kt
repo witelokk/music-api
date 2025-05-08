@@ -12,7 +12,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import com.witelokk.music.models.ShortArtist
+import com.witelokk.music.models.AristSummary
 import com.witelokk.music.models.Song
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -70,7 +70,7 @@ fun getSongWithArtistsAndFavorite(songId: UUID, userId: UUID?): Song? {
         val artists = (SongArtists innerJoin Artists)
             .select { SongArtists.songId eq songId }
             .map { artistRow ->
-                ShortArtist(
+                AristSummary(
                     id = artistRow[Artists.id],
                     name = artistRow[Artists.name],
                     avatarUrl = artistRow[Artists.avatarUrl]

@@ -15,5 +15,5 @@ data class Release(
     val type: String,
     @SerialName("released_at") @Serializable(DateTimeSerializer::class) val releasedAt: DateTime,
     val songs: Songs,
-    val artists: ShortArtists,
+    val artists: ArtistsSummary,
 )

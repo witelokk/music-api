@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class SearchResultItem(
     val type: String,
     val song: Song? = null,
-    val release: ShortRelease? = null,
-    val artist: ShortArtist? = null,
-    val playlist: ShortPlaylist? = null,
+    val release: ReleaseSummary? = null,
+    val artist: AristSummary? = null,
+    val playlist: PlaylistSummary? = null,
 )

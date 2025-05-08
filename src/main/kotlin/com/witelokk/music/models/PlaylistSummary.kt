@@ -6,8 +6,9 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 @Serializable
-data class ShortArtist(
+data class PlaylistSummary(
     @Serializable(UUIDSerializer::class) val id: UUID,
     val name: String,
-    @SerialName("avatar_url") val avatarUrl: String?,
+    @SerialName("cover_url") val coverUrl: String?,
+    @SerialName("songs_count") val songsCount: Int,
 )

@@ -65,7 +65,7 @@ fun Route.playlistsRoutes() {
                 response {
                     HttpStatusCode.OK to {
                         description = "Success"
-                        body<ShortPlaylists>()
+                        body<PlaylistsSummary>()
                     }
                 }
             }) {
@@ -200,7 +200,7 @@ fun getPlayListWithSongs(userId: UUID, playlistId: UUID): Playlist? {
     }
 }
 
-fun getPlaylists(userId: UUID): ShortPlaylists {
+fun getPlaylists(userId: UUID): PlaylistsSummary {
     val playlists = transaction {
         Playlists
             .leftJoin(PlaylistSongs)
@@ -209,7 +209,7 @@ fun getPlaylists(userId: UUID): ShortPlaylists {
             .select { Playlists.userId eq userId }
             .groupBy(*Playlists.fields.toTypedArray())
             .map {
-                ShortPlaylist(
+                PlaylistSummary(
                     id = it[Playlists.id],
                     name = it[Playlists.name],
                     coverUrl = null, // TODO: implement
@@ -218,7 +218,7 @@ fun getPlaylists(userId: UUID): ShortPlaylists {
             }
     }
 
-    return ShortPlaylists(
+    return PlaylistsSummary(
         count = playlists.size,
         playlists = playlists
     )

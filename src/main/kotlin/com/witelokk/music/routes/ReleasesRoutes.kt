@@ -2,7 +2,7 @@ package com.witelokk.music.routes
 
 import com.witelokk.music.models.FailureResponse
 import com.witelokk.music.models.Release
-import com.witelokk.music.models.ShortArtists
+import com.witelokk.music.models.ArtistsSummary
 import com.witelokk.music.models.Songs
 import io.github.smiley4.ktoropenapi.get
 import io.github.smiley4.ktoropenapi.route
@@ -11,7 +11,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import com.witelokk.music.models.ShortArtist
+import com.witelokk.music.models.AristSummary
 import com.witelokk.music.tables.Artists
 import com.witelokk.music.tables.ReleaseArtists
 import com.witelokk.music.tables.ReleaseSongs
@@ -72,7 +72,7 @@ fun getReleaseWithArtist(userId: UUID, releaseId: UUID): Release? {
         val artists = ReleaseArtists.leftJoin(Artists)
             .select { ReleaseArtists.releaseId eq releaseId }
             .map { artistRow ->
-                ShortArtist(
+                AristSummary(
                     id = artistRow[Artists.id],
                     name = artistRow[Artists.name],
                     avatarUrl = artistRow[Artists.avatarUrl]
@@ -93,7 +93,7 @@ fun getReleaseWithArtist(userId: UUID, releaseId: UUID): Release? {
                 count = songs.size,
                 songs = songs
             ),
-            artists = ShortArtists(
+            artists = ArtistsSummary(
                 count = artists.size,
                 artists = artists
             )

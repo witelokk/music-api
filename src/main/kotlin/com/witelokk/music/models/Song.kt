@@ -12,6 +12,6 @@ data class Song(
     @SerialName("cover_url") val coverUrl: String?,
     @SerialName("is_favorite") val isFavorite: Boolean,
     @SerialName("duration_seconds") val durationSeconds: Int,
-    val artists: List<ShortArtist>,
+    val artists: List<AristSummary>,
     @SerialName("stream_url") val streamUrl: String,
 )
