@@ -54,6 +54,7 @@ jobs:
           export MAILGUN_API_KEY="${{ secrets.MAILGUN_API_KEY }}"
           export MAILGUN_FROM="${{ secrets.MAILGUN_FROM }}"
           export MAILGUN_DOMAIN="${{ secrets.MAILGUN_DOMAIN }}"
+          export MAILGUN_REGION="${{ secrets.MAILGUN_REGION }}"
           export JWT_SECRET="${{ secrets.JWT_SECRET }}"
           export GOOGLE_AUTH_AUDIENCE="${{ secrets.GOOGLE_AUTH_AUDIENCE }}"
           

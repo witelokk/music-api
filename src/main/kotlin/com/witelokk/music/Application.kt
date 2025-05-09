@@ -29,9 +29,16 @@ fun Application.module() {
     val mailgunApiKey = environment.config.property("mailgun.api_key").getString()
     val mailGunDomain = environment.config.property("mailgun.domain").getString()
     val mailGunFrom = environment.config.property("mailgun.from").getString()
+    val mailGunRegion = when (environment.config.property("mailgun.region").getString()) {
+        "eu" -> MailGunRegion.EU
+        "us" -> MailGunRegion.US
+        else -> {
+            throw RuntimeException("MailGun region must be either 'eu' or 'us'")
+        }
+    }
     val googleAuthAudience = environment.config.property("google-auth.audience").getString().split(',')
 
-    val emailSender: EmailSender = MailgunEmailSender(mailgunApiKey, mailGunDomain, mailGunFrom)
+    val emailSender: EmailSender = MailgunEmailSender(mailgunApiKey, mailGunDomain, mailGunFrom, mailGunRegion)
 
     connectToDatabase(databaseUrl, databaseUser, databasePassword)
 

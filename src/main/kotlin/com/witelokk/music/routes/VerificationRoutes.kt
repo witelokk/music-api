@@ -60,7 +60,7 @@ fun Route.verificationRoutes(redis: KredsClient, emailSender: EmailSender) {
         try {
             emailSender.sendEmail(
                 listOf(request.email), "Account Verification", """Your Music code: <strong>${code}</strong>
-                    |
+                    |<br><br>
                     |The code will expire in ${CODE_TTL.inWholeMinutes} minutes""".trimMargin()
             )
         } catch (e: Exception) {

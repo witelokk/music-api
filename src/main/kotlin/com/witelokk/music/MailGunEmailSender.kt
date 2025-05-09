@@ -7,15 +7,20 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 
+enum class MailGunRegion {
+    EU, US
+}
+
 class MailgunEmailSender(
     private val apiKey: String,
     private val domain: String,
     private val from: String,
-): EmailSender {
+    private val region: MailGunRegion
+) : EmailSender {
     private val client = HttpClient(CIO)
 
     override suspend fun sendEmail(to: List<String>, subject: String, text: String) {
-        val url = "https://api.mailgun.net/v3/$domain/messages"
+        val url = "https://api${if (region == MailGunRegion.EU) ".eu" else ""}.mailgun.net/v3/$domain/messages"
 
         val response: HttpResponse = client.submitForm(
             url = url,
@@ -23,7 +28,7 @@ class MailgunEmailSender(
                 append("from", from)
                 appendAll("to", to)
                 append("subject", subject)
-                append("text", text)
+                append("html", text)
             }
         ) {
             headers {
