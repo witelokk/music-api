@@ -15,7 +15,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import com.witelokk.music.models.AristSummary
+import com.witelokk.music.models.ArtistSummary
 import com.witelokk.music.models.ArtistsSummary
 import com.witelokk.music.tables.Artists
 import com.witelokk.music.tables.Followers
@@ -124,7 +124,7 @@ fun Route.followingsRoutes() {
     }
 }
 
-fun getFollowings(userId: UUID): List<AristSummary> {
+fun getFollowings(userId: UUID): List<ArtistSummary> {
     return transaction {
         (Followers innerJoin Artists)
             .slice(
@@ -140,7 +140,7 @@ fun getFollowings(userId: UUID): List<AristSummary> {
             }
             .groupBy(Artists.id, Artists.name, Artists.avatarUrl, Artists.coverUrl)
             .map {
-                AristSummary(
+                ArtistSummary(
                     id = it[Artists.id],
                     name = it[Artists.name],
                     avatarUrl = it[Artists.avatarUrl],

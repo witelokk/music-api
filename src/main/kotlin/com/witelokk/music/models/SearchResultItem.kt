@@ -7,6 +7,6 @@ data class SearchResultItem(
     val type: String,
     val song: Song? = null,
     val release: ReleaseSummary? = null,
-    val artist: AristSummary? = null,
+    val artist: ArtistSummary? = null,
     val playlist: PlaylistSummary? = null,
 )

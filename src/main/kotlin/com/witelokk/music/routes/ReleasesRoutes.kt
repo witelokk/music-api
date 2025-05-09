@@ -11,7 +11,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import com.witelokk.music.models.AristSummary
+import com.witelokk.music.models.ArtistSummary
 import com.witelokk.music.tables.Artists
 import com.witelokk.music.tables.ReleaseArtists
 import com.witelokk.music.tables.ReleaseSongs
@@ -72,7 +72,7 @@ fun getReleaseWithArtist(userId: UUID, releaseId: UUID): Release? {
         val artists = ReleaseArtists.leftJoin(Artists)
             .select { ReleaseArtists.releaseId eq releaseId }
             .map { artistRow ->
-                AristSummary(
+                ArtistSummary(
                     id = artistRow[Artists.id],
                     name = artistRow[Artists.name],
                     avatarUrl = artistRow[Artists.avatarUrl]

@@ -79,7 +79,7 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
                     val artists = SongArtists.innerJoin(Artists)
                         .select { SongArtists.songId eq songId }
                         .map {
-                            AristSummary(
+                            ArtistSummary(
                                 id = it[Artists.id],
                                 name = it[Artists.name],
                                 avatarUrl = it[Artists.avatarUrl]
@@ -115,7 +115,7 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
                     val artists = ReleaseArtists.innerJoin(Artists)
                         .select { ReleaseArtists.releaseId eq releaseId }
                         .map {
-                            AristSummary(
+                            ArtistSummary(
                                 id = it[Artists.id],
                                 name = it[Artists.name],
                                 avatarUrl = it[Artists.avatarUrl]
@@ -141,7 +141,7 @@ private fun search(userId: UUID, query: String, type: String?, page: Int, limit:
                 .map { row ->
                     SearchResultItem(
                         type = "artist",
-                        artist = AristSummary(
+                        artist = ArtistSummary(
                             id = row[Artists.id],
                             name = row[Artists.name],
                             avatarUrl = row[Artists.avatarUrl]
