@@ -184,7 +184,7 @@ fun getPlayListWithSongs(userId: UUID, playlistId: UUID): Playlist? {
             .leftJoin(Songs)
             .select { PlaylistSongs.playlistId eq playlistId }
             .map { row ->
-                getSongWithArtistsAndFavorite(userId, row[Songs.id])!!
+                getSongWithArtistsAndFavorite(row[Songs.id], userId)!!
             }
 
         Playlist(
