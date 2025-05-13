@@ -66,6 +66,7 @@ fun Application.module() {
         playlistsRoutes()
         playlistSongsRoutes()
         searchRoutes()
+        homeScreenLayoutRoutes()
 
         route("api.json", { hidden = true }) {
             get {
