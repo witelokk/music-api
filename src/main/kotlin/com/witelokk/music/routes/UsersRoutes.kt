@@ -84,6 +84,12 @@ fun Route.userRoutes(redis: KredsClient) {
         authenticate("auth-jwt") {
             get("/me", {
                 description = "Get info about current user"
+                response {
+                    HttpStatusCode.OK to {
+                        description = "Info about current user"
+                        body<User>()
+                    }
+                }
             }) {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = UUID.fromString(principal!!.payload.getClaim("sub").asString())
