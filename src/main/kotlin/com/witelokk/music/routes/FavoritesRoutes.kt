@@ -24,6 +24,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.joda.time.DateTime
 import java.sql.SQLException
 import java.util.*
 
@@ -72,7 +73,7 @@ fun Route.favoriteRoutes() {
                 val request = call.receive<AddFavoriteSongRequest>()
 
                 try {
-                    addFavoriteSong(userId, request.songId)
+                    addFavoriteSong(userId, request.songId, DateTime.now())
                 } catch (e: SQLException) {
                     if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
                         return@post call.respond(
@@ -131,6 +132,7 @@ fun getFavoriteSongs(userId: UUID): List<Song> {
     return transaction {
         val favoriteSongs = (Favorites innerJoin Songs)
             .select { Favorites.userId eq userId }
+            .sortedByDescending { Favorites.addedAt }
             .map { it[Songs.id] }
 
         favoriteSongs.mapNotNull { songId ->
@@ -159,11 +161,12 @@ fun getFavoriteSongs(userId: UUID): List<Song> {
     }
 }
 
-fun addFavoriteSong(userId: UUID, songId: UUID) {
+fun addFavoriteSong(userId: UUID, songId: UUID, addedAt: DateTime) {
     transaction {
         Favorites.insert {
             it[Favorites.songId] = songId
             it[Favorites.userId] = userId
+            it[Favorites.addedAt] = addedAt
         }
     }
 }

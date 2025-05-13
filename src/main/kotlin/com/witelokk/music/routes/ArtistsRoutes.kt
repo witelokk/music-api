@@ -76,7 +76,7 @@ private fun getArtistWithFollowingAndPopularSongAndRecentReleases(artistId: UUID
     val releases =
         ReleaseArtists.leftJoin(Releases).select { ReleaseArtists.artistId eq artistId }.map {
             getReleaseWithArtist(userId, it[ReleaseArtists.releaseId])
-        }.filter { it != null }.map { it!! }
+        }.filter { it != null }.sortedByDescending { Releases.releasedAt }.map { it!! }
 
     val q = Artists.leftJoin(Followers).slice(
 //        Artists.id, Artists.name, Artists.coverUrl, Artists.avatarUrl, Followers.userId.count(), followingAlias
