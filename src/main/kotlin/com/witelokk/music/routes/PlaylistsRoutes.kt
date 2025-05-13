@@ -126,7 +126,9 @@ fun Route.playlistsRoutes() {
                     )
                 }
 
-                deletePlaylist(playlistId, userId)
+                deletePlaylist(userId, playlistId)
+
+                call.respond(HttpStatusCode.OK)
             }
 
             put("/{id}", {
