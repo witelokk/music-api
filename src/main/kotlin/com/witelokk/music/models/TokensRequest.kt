@@ -9,4 +9,5 @@ data class TokensRequest(
     val email: String? = null,
     val code: String? = null,
     @SerialName("google_token") val googleToken: String? = null,
+    @SerialName("refresh_token") val refreshToken: String? = null,
 )

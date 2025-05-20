@@ -21,6 +21,9 @@ import kotlin.time.Duration
 
 
 val TOKEN_TTL = Duration.parse("24h")
+val REFRESH_TOKEN_TTL = Duration.parse("30d")
+
+fun generateRefreshToken(): String = UUID.randomUUID().toString()
 
 fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifier: GoogleIdTokenVerifier) {
     suspend fun validateCode(email: String, code: String): String? {
@@ -57,31 +60,110 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
     }) {
         val request = call.receive<TokensRequest>()
 
-        val (email, name) = when (request.grantType) {
-            "code" -> {
-                val email = request.email ?: return@post call.respond(
-                    HttpStatusCode.BadRequest,
-                    FailureResponse("no_email", "No email provided")
-                )
-                val code = request.code ?: return@post call.respond(
-                    HttpStatusCode.BadRequest,
-                    FailureResponse("no_code", "No code provided")
-                )
-                validateCode(email, code)?.let { it to null } ?: return@post call.respond(
-                    HttpStatusCode.BadRequest,
-                    FailureResponse("invalid_code", "Invalid code")
-                )
+        when (request.grantType) {
+            "code", "google_token" -> {
+                val (email, name) = when (request.grantType) {
+                    "code" -> {
+                        val email = request.email ?: return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            FailureResponse("no_email", "No email provided")
+                        )
+                        val code = request.code ?: return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            FailureResponse("no_code", "No code provided")
+                        )
+                        validateCode(email, code)?.let { it to null } ?: return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            FailureResponse("invalid_code", "Invalid code")
+                        )
+                    }
+
+                    "google_token" -> {
+                        val token = request.googleToken ?: return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            FailureResponse("no_google_token", "No google_token provided")
+                        )
+                        validateGoogleToken(token) ?: return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            FailureResponse("invalid_google_id_token", "Invalid Google ID token")
+                        )
+                    }
+
+                    else -> error("unreachable")
+                }
+
+                val user = transaction {
+                    Users.select { Users.email eq email }.singleOrNull()
+                }
+
+                if (user == null) {
+                    if (request.grantType == "google_token") {
+                        transaction {
+                            val newUserId = UUID.randomUUID()
+                            val newName = name ?: "Unknown User"
+                            Users.insert {
+                                it[id] = newUserId
+                                it[Users.name] = newName
+                                it[Users.email] = email
+                                it[createdAt] = DateTime.now()
+                            }
+                        }
+                    } else {
+                        return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            FailureResponse("invalid_user", "User not found")
+                        )
+                    }
+                }
+
+                val existingUser = transaction {
+                    Users.select { Users.email eq email }.single()
+                }
+
+                val jwt = JWT.create()
+                    .withClaim("sub", existingUser[Users.id].toString())
+                    .withExpiresAt(DateTime.now().plusSeconds(TOKEN_TTL.inWholeSeconds.toInt()).toDate())
+                    .sign(Algorithm.HMAC256(jwtSecret))
+
+                val refreshToken = generateRefreshToken()
+                redis.use { client ->
+                    client.set("refresh_token:$refreshToken", existingUser[Users.id].toString())
+                    client.expire("refresh_token:$refreshToken", REFRESH_TOKEN_TTL.inWholeSeconds.toULong())
+                }
+
+                call.respond(HttpStatusCode.Created, TokensResponse(jwt, refreshToken))
             }
 
-            "google_token" -> {
-                val token = request.googleToken ?: return@post call.respond(
+            "refresh_token" -> {
+                val refreshToken = request.refreshToken ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
-                    FailureResponse("no_google_token", "No google_token provided")
+                    FailureResponse("no_refresh_token", "No refresh token provided")
                 )
-                validateGoogleToken(token) ?: return@post call.respond(
+                val userId = redis.use { client ->
+                    val value = client.get("refresh_token:$refreshToken")
+                    if (value == null) {
+                        null
+                    } else {
+                        client.del("refresh_token:$refreshToken")
+                        value
+                    }
+                } ?: return@post call.respond(
                     HttpStatusCode.BadRequest,
-                    FailureResponse("invalid_google_id_token", "Invalid Google ID token")
+                    FailureResponse("invalid_refresh_token", "Invalid or expired refresh token")
                 )
+
+                val jwt = JWT.create()
+                    .withClaim("sub", userId)
+                    .withExpiresAt(DateTime.now().plusSeconds(TOKEN_TTL.inWholeSeconds.toInt()).toDate())
+                    .sign(Algorithm.HMAC256(jwtSecret))
+
+                val newRefreshToken = generateRefreshToken()
+                redis.use { client ->
+                    client.set("refresh_token:$newRefreshToken", userId)
+                    client.expire("refresh_token:$newRefreshToken", REFRESH_TOKEN_TTL.inWholeSeconds.toULong())
+                }
+
+                call.respond(HttpStatusCode.Created, TokensResponse(jwt, newRefreshToken))
             }
 
             else -> return@post call.respond(
@@ -89,37 +171,5 @@ fun Route.authRoutes(redis: KredsClient, jwtSecret: String, googleIdTokenVerifie
                 FailureResponse("invalid_grant_type", "Invalid grant_type")
             )
         }
-
-        val user = transaction {
-            Users.select { Users.email eq email }.singleOrNull()
-        }
-
-        if (user == null) {
-            if (request.grantType == "google_token") {
-                transaction {
-                    val newUserId = UUID.randomUUID()
-                    val newName = name ?: "Unknown User"
-                    Users.insert {
-                        it[id] = newUserId
-                        it[Users.name] = newName
-                        it[Users.email] = email
-                        it[createdAt] = DateTime.now()
-                    }
-                }
-            } else {
-                return@post call.respond(HttpStatusCode.BadRequest, FailureResponse("invalid_user", "User not found"))
-            }
-        }
-
-        val existingUser = transaction {
-            Users.select { Users.email eq email }.single()
-        }
-
-        val jwt = JWT.create()
-            .withClaim("sub", existingUser[Users.id].toString())
-            .withExpiresAt(DateTime.now().plusSeconds(TOKEN_TTL.inWholeSeconds.toInt()).toDate())
-            .sign(Algorithm.HMAC256(jwtSecret))
-
-        call.respond(HttpStatusCode.Created, TokensResponse(jwt))
     }
 }
