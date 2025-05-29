@@ -40,15 +40,16 @@ fun Route.homeScreenLayoutRoutes() {
 
             transaction {
                 playlists =
-                    Playlists.select { Playlists.userId eq userId }.sortedByDescending { Playlists.createdAt }.map {
-                        PlaylistSummary(
-                            id = it[Playlists.id],
-                            name = it[Playlists.name],
-                            coverUrl = null,
-                            songsCount = PlaylistSongs.select { PlaylistSongs.playlistId eq it[Playlists.id] }.count()
-                                .toInt(),
-                        )
-                    }
+                    Playlists.select { Playlists.userId eq userId }
+                        .orderBy(Playlists.createdAt, org.jetbrains.exposed.sql.SortOrder.DESC)
+                        .map {
+                            PlaylistSummary(
+                                id = it[Playlists.id],
+                                name = it[Playlists.name],
+                                coverUrl = null,
+                                songsCount = PlaylistSongs.select { PlaylistSongs.playlistId eq it[Playlists.id] }.count().toInt(),
+                            )
+                        }
                 followedArtists = Followers.leftJoin(Artists).select { Followers.userId eq userId }.map {
                     ArtistSummary(
                         id = it[Artists.id],

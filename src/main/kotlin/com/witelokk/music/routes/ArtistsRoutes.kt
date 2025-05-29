@@ -74,9 +74,12 @@ private fun getArtistWithFollowingAndPopularSongAndRecentReleases(artistId: UUID
                 getSongWithArtistsAndFavorite(it[SongArtists.songId], userId)
             }.filter { it != null }.map { it!! }
     val releases =
-        ReleaseArtists.leftJoin(Releases).select { ReleaseArtists.artistId eq artistId }.map {
-            getReleaseWithArtist(userId, it[ReleaseArtists.releaseId])
-        }.filter { it != null }.sortedByDescending { Releases.releasedAt }.map { it!! }
+        ReleaseArtists.leftJoin(Releases)
+            .select { ReleaseArtists.artistId eq artistId }
+            .orderBy(Releases.releasedAt, org.jetbrains.exposed.sql.SortOrder.DESC)
+            .map {
+                getReleaseWithArtist(userId, it[ReleaseArtists.releaseId])
+            }.filter { it != null }.map { it!! }
 
     val q = Artists.leftJoin(Followers).slice(
 //        Artists.id, Artists.name, Artists.coverUrl, Artists.avatarUrl, Followers.userId.count(), followingAlias
