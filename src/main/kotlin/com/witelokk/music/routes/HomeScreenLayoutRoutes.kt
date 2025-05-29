@@ -13,6 +13,8 @@ import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.*
 
 fun Route.homeScreenLayoutRoutes() {
@@ -54,12 +56,16 @@ fun Route.homeScreenLayoutRoutes() {
                         avatarUrl = it[Artists.avatarUrl]
                     )
                 }
+                val todaySeed = (LocalDate.now(ZoneOffset.UTC).toEpochDay() % 1000) / 1000.0 // value between 0 and 1
+                exec("SELECT setseed($todaySeed)")
                 forYouReleases = Releases.selectAll().orderBy(Random()).limit(4).map {
                     getReleaseWithArtist(userId, it[Releases.id])!!
                 }
+                exec("SELECT setseed(${(todaySeed + 0.1) % 1.0})")
                 popularReleases = Releases.selectAll().orderBy(Random()).limit(4).map {
                     getReleaseWithArtist(userId, it[Releases.id])!!
                 }
+                exec("SELECT setseed(${(todaySeed + 0.2) % 1.0})")
                 exploreReleases = Releases.selectAll().orderBy(Random()).limit(4).map {
                     getReleaseWithArtist(userId, it[Releases.id])!!
                 }
