@@ -1,6 +1,7 @@
 package com.witelokk.music.routes
 
 import com.witelokk.music.PG_FOREIGN_KEY_VIOLATION
+import com.witelokk.music.PG_UNIQUE_VIOLATION
 import com.witelokk.music.models.CreateUserRequest
 import com.witelokk.music.models.FailureResponse
 import com.witelokk.music.models.User
@@ -67,7 +68,7 @@ fun Route.userRoutes(redis: KredsClient) {
                     }
                 }
             } catch (e: SQLException) {
-                if (e.sqlState == PG_FOREIGN_KEY_VIOLATION) {
+                if (e.sqlState == PG_UNIQUE_VIOLATION) {
                     call.respond(
                         HttpStatusCode.Conflict, FailureResponse("user_exists", "User with such email already exists")
                     )
