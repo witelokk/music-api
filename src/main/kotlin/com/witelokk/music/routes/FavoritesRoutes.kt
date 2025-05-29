@@ -130,13 +130,14 @@ fun Route.favoriteRoutes() {
 
 fun getFavoriteSongs(userId: UUID): List<Song> {
     return transaction {
-        val favoriteSongs = (Favorites innerJoin Songs)
+        val favoriteSongRows = (Favorites innerJoin Songs)
             .select { Favorites.userId eq userId }
-            .sortedByDescending { Favorites.addedAt }
-            .map { it[Songs.id] }
+            .orderBy(Favorites.addedAt, org.jetbrains.exposed.sql.SortOrder.DESC)
+            .toList()
 
-        favoriteSongs.mapNotNull { songId ->
-            val songRow = Songs.select { Songs.id eq songId }.singleOrNull() ?: return@mapNotNull null
+        favoriteSongRows.map { row ->
+            val songId = row[Songs.id]
+            val songRow = Songs.select { Songs.id eq songId }.singleOrNull() ?: return@map null
 
             val artists = (SongArtists innerJoin Artists)
                 .select { SongArtists.songId eq songId }
@@ -157,7 +158,7 @@ fun getFavoriteSongs(userId: UUID): List<Song> {
                 artists = artists,
                 streamUrl = songRow[Songs.streamUrl]
             )
-        }
+        }.filterNotNull()
     }
 }
 
