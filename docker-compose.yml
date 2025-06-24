@@ -25,7 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
   redis:
-    image: redis
+    image: redis:8
     restart: unless-stopped
   nginx:
     image: ghcr.io/max-lt/nginx-jwt-module:latest
