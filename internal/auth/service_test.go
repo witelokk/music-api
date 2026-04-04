@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type fakeUserRepository struct {
@@ -26,7 +28,7 @@ func (r *fakeUserRepository) CreateUser(ctx context.Context, name, email string)
 	}
 
 	u := &User{
-		ID:        "user-" + email,
+		ID:        uuid.NewString(),
 		Name:      name,
 		Email:     email,
 		CreatedAt: time.Now(),
@@ -493,4 +495,3 @@ func TestAuthService_GetTokensWithRefreshToken_Expired(t *testing.T) {
 		t.Fatalf("expected expired refresh token to remain stored")
 	}
 }
-

@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/witelokk/music-api/internal"
 	"github.com/witelokk/music-api/internal/auth"
+	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
 func main() {
@@ -50,12 +51,29 @@ func main() {
 		},
 	)
 
-	router := http.NewServeMux()
-	internal.AddRoutes(router, authService, logger)
+	serverImpl := internal.NewServer(authService, logger)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /openapi.yml", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "openapi.yml")
+	})
+	handler := openapi.HandlerFromMux(openapi.NewStrictHandler(serverImpl, nil), mux)
+
+	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
 
 	server := &http.Server{
 		Addr:         config.HttpServer.Host + ":" + config.HttpServer.Port,
-		Handler:      router,
+		Handler:      corsHandler,
 		ReadTimeout:  config.HttpServer.Timeouts.Read,
 		WriteTimeout: config.HttpServer.Timeouts.Write,
 		IdleTimeout:  config.HttpServer.Timeouts.Idle,

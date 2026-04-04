@@ -1,218 +1,180 @@
 package auth
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"log/slog"
-	"net/http"
 	"net/mail"
+
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
-func NewSendVerificationEmailHandler(service *AuthService, logger *slog.Logger) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+func HandleSendVerificationEmail(
+	ctx context.Context,
+	service *AuthService,
+	logger *slog.Logger,
+	req openapi.SendVerificationEmailRequestObject,
+) (openapi.SendVerificationEmailResponseObject, error) {
+	if req.Body == nil {
+		return openapi.SendVerificationEmail400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+	}
+
+	body := req.Body
+
+	if string(body.Email) == "" {
+		return openapi.SendVerificationEmail400JSONResponse(openapi.Error{Error: "email is required"}), nil
+	}
+
+	if _, err := mail.ParseAddress(string(body.Email)); err != nil {
+		return openapi.SendVerificationEmail400JSONResponse(openapi.Error{Error: "invalid email"}), nil
+	}
+
+	if err := service.SendVerificationEmail(ctx, string(body.Email)); err != nil {
+		if errors.Is(err, ErrVerificationCodeRecentlySent) {
+			return openapi.SendVerificationEmail429JSONResponse(openapi.Error{Error: "verification code recently sent"}), nil
 		}
 
-		defer r.Body.Close()
+		logger.Error("failed to send verification email",
+			slog.String("email", string(body.Email)),
+			slog.String("error", err.Error()),
+		)
 
-		var req SendVerificationEmailRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid request body")
-			return
-		}
+		return openapi.SendVerificationEmail500JSONResponse(openapi.Error{Error: "failed to send verification email"}), nil
+	}
 
-		if req.Email == "" {
-			writeJSONError(w, http.StatusBadRequest, "email is required")
-			return
-		}
+	return openapi.SendVerificationEmail204Response{}, nil
+}
 
-		if _, err := mail.ParseAddress(req.Email); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid email")
-			return
-		}
+func HandleCreateUser(
+	ctx context.Context,
+	service *AuthService,
+	logger *slog.Logger,
+	req openapi.CreateUserRequestObject,
+) (openapi.CreateUserResponseObject, error) {
+	if req.Body == nil {
+		return openapi.CreateUser400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+	}
 
-		if err := service.SendVerificationEmail(r.Context(), req.Email); err != nil {
-			if errors.Is(err, ErrVerificationCodeRecentlySent) {
-				writeJSONError(w, http.StatusTooManyRequests, "verification code recently sent")
-				return
-			}
+	body := req.Body
 
-			logger.Error("failed to send verification email",
-				slog.String("email", req.Email),
+	if body.Name == "" {
+		return openapi.CreateUser400JSONResponse(openapi.Error{Error: "name is required"}), nil
+	}
+
+	if string(body.Email) == "" {
+		return openapi.CreateUser400JSONResponse(openapi.Error{Error: "email is required"}), nil
+	}
+
+	if _, err := mail.ParseAddress(string(body.Email)); err != nil {
+		return openapi.CreateUser400JSONResponse(openapi.Error{Error: "invalid email"}), nil
+	}
+
+	if body.Code == "" {
+		return openapi.CreateUser400JSONResponse(openapi.Error{Error: "verification_code is required"}), nil
+	}
+
+	user := &User{
+		Name:  body.Name,
+		Email: string(body.Email),
+	}
+
+	if err := service.CreateUser(ctx, user, body.Code); err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidVerificationCode):
+			return openapi.CreateUser400JSONResponse(openapi.Error{Error: "invalid verification code"}), nil
+		case errors.Is(err, ErrExpiredVerificationCode):
+			return openapi.CreateUser400JSONResponse(openapi.Error{Error: "verification code expired"}), nil
+		case errors.Is(err, ErrUserAlreadyExists):
+			return openapi.CreateUser409JSONResponse(openapi.Error{Error: "user already exists"}), nil
+		default:
+			logger.Error("failed to create user",
+				slog.String("email", string(body.Email)),
 				slog.String("error", err.Error()),
 			)
-
-			writeJSONError(w, http.StatusInternalServerError, "failed to send verification email")
-			return
+			return openapi.CreateUser500JSONResponse(openapi.Error{Error: "failed to create user"}), nil
 		}
-
-		w.WriteHeader(http.StatusNoContent)
 	}
+
+	resp := openapi.User{
+		Id:        uuid.MustParse(user.ID),
+		Name:      user.Name,
+		Email:     openapi_types.Email(user.Email),
+		CreatedAt: user.CreatedAt,
+	}
+
+	return openapi.CreateUser201JSONResponse(resp), nil
 }
 
-func NewCreateUserHandler(service *AuthService, logger *slog.Logger) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
+func HandleGenerateTokens(
+	ctx context.Context,
+	service *AuthService,
+	logger *slog.Logger,
+	req openapi.GenerateTokensRequestObject,
+) (openapi.GenerateTokensResponseObject, error) {
+	if req.Body == nil {
+		return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+	}
+
+	body := req.Body
+
+	switch body.GrantType {
+	case openapi.Code:
+		if body.Email == nil || *body.Email == "" {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "email is required"}), nil
+		}
+		if body.Code == nil || *body.Code == "" {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "verification code is required"}), nil
 		}
 
-		defer r.Body.Close()
-
-		var req CreateUserRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid request body")
-			return
-		}
-
-		if req.Name == "" {
-			writeJSONError(w, http.StatusBadRequest, "name is required")
-			return
-		}
-
-		if req.Email == "" {
-			writeJSONError(w, http.StatusBadRequest, "email is required")
-			return
-		}
-
-		if _, err := mail.ParseAddress(req.Email); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid email")
-			return
-		}
-
-		if req.VerificationCode == "" {
-			writeJSONError(w, http.StatusBadRequest, "verification_code is required")
-			return
-		}
-
-		user := &User{
-			Name:  req.Name,
-			Email: req.Email,
-		}
-
-		if err := service.CreateUser(r.Context(), user, req.VerificationCode); err != nil {
+		tokens, err := service.GetTokensWithVerificationCode(ctx, string(*body.Email), *body.Code)
+		if err != nil {
 			switch {
 			case errors.Is(err, ErrInvalidVerificationCode):
-				writeJSONError(w, http.StatusBadRequest, "invalid verification code")
-				return
+				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid verification code"}), nil
 			case errors.Is(err, ErrExpiredVerificationCode):
-				writeJSONError(w, http.StatusBadRequest, "verification code expired")
-				return
-			case errors.Is(err, ErrUserAlreadyExists):
-				writeJSONError(w, http.StatusConflict, "user already exists")
-				return
+				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "verification code expired"}), nil
 			default:
-				logger.Error("failed to create user",
-					slog.String("email", req.Email),
+				logger.Error("failed to get tokens with verification code",
+					slog.String("email", string(*body.Email)),
 					slog.String("error", err.Error()),
 				)
-				writeJSONError(w, http.StatusInternalServerError, "failed to create user")
-				return
+				return openapi.GenerateTokens500JSONResponse(openapi.Error{Error: "failed to get tokens"}), nil
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(user)
+		return openapi.GenerateTokens200JSONResponse(openapi.TokensResponse{
+			AccessToken:  tokens.AccessToken,
+			RefreshToken: tokens.RefreshToken,
+		}), nil
+
+	case openapi.RefreshToken:
+		if body.RefreshToken == nil || *body.RefreshToken == "" {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "refresh_token is required"}), nil
+		}
+
+		tokens, err := service.GetTokensWithRefreshToken(ctx, *body.RefreshToken)
+		if err != nil {
+			switch {
+			case errors.Is(err, ErrInvalidRefreshToken):
+				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid refresh token"}), nil
+			case errors.Is(err, ErrExpiredRefreshToken):
+				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "refresh token expired"}), nil
+			default:
+				logger.Error("failed to get tokens with refresh token",
+					slog.String("error", err.Error()),
+				)
+				return openapi.GenerateTokens500JSONResponse(openapi.Error{Error: "failed to get tokens"}), nil
+			}
+		}
+
+		return openapi.GenerateTokens200JSONResponse(openapi.TokensResponse{
+			AccessToken:  tokens.AccessToken,
+			RefreshToken: tokens.RefreshToken,
+		}), nil
+
+	default:
+		return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "unsupported grant_type"}), nil
 	}
-}
-
-func NewGenerateTokensHandler(service *AuthService, logger *slog.Logger) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		defer r.Body.Close()
-
-		var req GetTokensRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid request body")
-			return
-		}
-
-		switch req.GrantType {
-		case "code":
-			if req.Email == "" {
-				writeJSONError(w, http.StatusBadRequest, "email is required")
-				return
-			}
-			if req.VerificationCode == "" {
-				writeJSONError(w, http.StatusBadRequest, "verification code is required")
-				return
-			}
-
-			tokens, err := service.GetTokensWithVerificationCode(r.Context(), req.Email, req.VerificationCode)
-			if err != nil {
-				switch {
-				case errors.Is(err, ErrInvalidVerificationCode):
-					writeJSONError(w, http.StatusBadRequest, "invalid verification code")
-					return
-				case errors.Is(err, ErrExpiredVerificationCode):
-					writeJSONError(w, http.StatusBadRequest, "verification code expired")
-					return
-				default:
-					logger.Error("failed to get tokens with verification code",
-						slog.String("email", req.Email),
-						slog.String("error", err.Error()),
-					)
-					writeJSONError(w, http.StatusInternalServerError, "failed to get tokens")
-					return
-				}
-			}
-
-			writeTokensResponse(w, tokens)
-
-		case "refresh_token":
-			if req.RefreshToken == "" {
-				writeJSONError(w, http.StatusBadRequest, "refresh_token is required")
-				return
-			}
-
-			tokens, err := service.GetTokensWithRefreshToken(r.Context(), req.RefreshToken)
-			if err != nil {
-				switch {
-				case errors.Is(err, ErrInvalidRefreshToken):
-					writeJSONError(w, http.StatusBadRequest, "invalid refresh token")
-					return
-				case errors.Is(err, ErrExpiredRefreshToken):
-					writeJSONError(w, http.StatusBadRequest, "refresh token expired")
-					return
-				default:
-					logger.Error("failed to get tokens with refresh token",
-						slog.String("error", err.Error()),
-					)
-					writeJSONError(w, http.StatusInternalServerError, "failed to get tokens")
-					return
-				}
-			}
-
-			writeTokensResponse(w, tokens)
-
-		default:
-			writeJSONError(w, http.StatusBadRequest, "unsupported grant_type")
-		}
-	}
-}
-
-func writeJSONError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"error": message,
-	})
-}
-
-func writeTokensResponse(w http.ResponseWriter, tokens *Tokens) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	_ = json.NewEncoder(w).Encode(TokensResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-	})
 }
