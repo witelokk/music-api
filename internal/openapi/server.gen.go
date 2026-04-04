@@ -12,8 +12,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/oapi-codegen/runtime"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+)
+
+const (
+	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
 // Defines values for GetTokensRequestGrantType.
@@ -32,6 +37,32 @@ func (e GetTokensRequestGrantType) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// Artist defines model for Artist.
+type Artist struct {
+	AvatarUrl    *string            `json:"avatar_url,omitempty"`
+	CoverUrl     *string            `json:"cover_url,omitempty"`
+	Followers    int                `json:"followers"`
+	Following    bool               `json:"following"`
+	Id           openapi_types.UUID `json:"id"`
+	Name         string             `json:"name"`
+	PopularSongs SongList           `json:"popularSongs"`
+	Releases     ReleaseList        `json:"releases"`
+}
+
+// ArtistList defines model for ArtistList.
+type ArtistList struct {
+	Artists []ArtistSummary `json:"artists"`
+	Count   int             `json:"count"`
+	Names   string          `json:"names"`
+}
+
+// ArtistSummary defines model for ArtistSummary.
+type ArtistSummary struct {
+	AvatarUrl *string            `json:"avatar_url,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Name      string             `json:"name"`
 }
 
 // CreateUserRequest defines model for CreateUserRequest.
@@ -81,10 +112,44 @@ type GetTokensRequest struct {
 // GetTokensRequestGrantType Grant type to use.
 type GetTokensRequestGrantType string
 
+// Release defines model for Release.
+type Release struct {
+	Artists    ArtistList         `json:"artists"`
+	CoverUrl   *string            `json:"cover_url,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	Name       string             `json:"name"`
+	ReleasedAt string             `json:"released_at"`
+	Songs      SongList           `json:"songs"`
+	Type       string             `json:"type"`
+}
+
+// ReleaseList defines model for ReleaseList.
+type ReleaseList struct {
+	Count    int       `json:"count"`
+	Releases []Release `json:"releases"`
+}
+
 // SendVerificationEmailRequest defines model for SendVerificationEmailRequest.
 type SendVerificationEmailRequest struct {
 	// Email Email address to send a verification code to.
 	Email openapi_types.Email `json:"email"`
+}
+
+// Song defines model for Song.
+type Song struct {
+	Artists         []ArtistSummary    `json:"artists"`
+	CoverUrl        *string            `json:"cover_url,omitempty"`
+	DurationSeconds int                `json:"duration_seconds"`
+	Id              openapi_types.UUID `json:"id"`
+	IsFavorite      bool               `json:"is_favorite"`
+	Name            string             `json:"name"`
+	StreamUrl       string             `json:"stream_url"`
+}
+
+// SongList defines model for SongList.
+type SongList struct {
+	Count int    `json:"count"`
+	Songs []Song `json:"songs"`
 }
 
 // TokensResponse defines model for TokensResponse.
@@ -112,6 +177,15 @@ type SendVerificationEmailJSONRequestBody = SendVerificationEmailRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get artist by ID
+	// (GET /artists/{id})
+	GetArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Get release by ID
+	// (GET /releases/{id})
+	GetRelease(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Get song by ID
+	// (GET /songs/{id})
+	GetSong(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Obtain access and refresh tokens
 	// (POST /tokens)
 	GenerateTokens(w http.ResponseWriter, r *http.Request)
@@ -134,6 +208,81 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetArtist operation middleware
+func (siw *ServerInterfaceWrapper) GetArtist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetArtist(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRelease operation middleware
+func (siw *ServerInterfaceWrapper) GetRelease(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRelease(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSong operation middleware
+func (siw *ServerInterfaceWrapper) GetSong(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSong(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GenerateTokens operation middleware
 func (siw *ServerInterfaceWrapper) GenerateTokens(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +314,12 @@ func (siw *ServerInterfaceWrapper) CreateUser(w http.ResponseWriter, r *http.Req
 
 // GetCurrentUser operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCurrentUser(w, r)
@@ -311,12 +466,120 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc("GET "+options.BaseURL+"/artists/{id}", wrapper.GetArtist)
+	m.HandleFunc("GET "+options.BaseURL+"/releases/{id}", wrapper.GetRelease)
+	m.HandleFunc("GET "+options.BaseURL+"/songs/{id}", wrapper.GetSong)
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
 	m.HandleFunc("POST "+options.BaseURL+"/users", wrapper.CreateUser)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetCurrentUser)
 	m.HandleFunc("POST "+options.BaseURL+"/verification-email", wrapper.SendVerificationEmail)
 
 	return m
+}
+
+type GetArtistRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetArtistResponseObject interface {
+	VisitGetArtistResponse(w http.ResponseWriter) error
+}
+
+type GetArtist200JSONResponse Artist
+
+func (response GetArtist200JSONResponse) VisitGetArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetArtist404JSONResponse Error
+
+func (response GetArtist404JSONResponse) VisitGetArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetArtist500JSONResponse Error
+
+func (response GetArtist500JSONResponse) VisitGetArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetReleaseRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetReleaseResponseObject interface {
+	VisitGetReleaseResponse(w http.ResponseWriter) error
+}
+
+type GetRelease200JSONResponse Release
+
+func (response GetRelease200JSONResponse) VisitGetReleaseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRelease404JSONResponse Error
+
+func (response GetRelease404JSONResponse) VisitGetReleaseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetRelease500JSONResponse Error
+
+func (response GetRelease500JSONResponse) VisitGetReleaseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSongRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetSongResponseObject interface {
+	VisitGetSongResponse(w http.ResponseWriter) error
+}
+
+type GetSong200JSONResponse Song
+
+func (response GetSong200JSONResponse) VisitGetSongResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSong404JSONResponse Error
+
+func (response GetSong404JSONResponse) VisitGetSongResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSong500JSONResponse Error
+
+func (response GetSong500JSONResponse) VisitGetSongResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type GenerateTokensRequestObject struct {
@@ -477,6 +740,15 @@ func (response SendVerificationEmail500JSONResponse) VisitSendVerificationEmailR
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Get artist by ID
+	// (GET /artists/{id})
+	GetArtist(ctx context.Context, request GetArtistRequestObject) (GetArtistResponseObject, error)
+	// Get release by ID
+	// (GET /releases/{id})
+	GetRelease(ctx context.Context, request GetReleaseRequestObject) (GetReleaseResponseObject, error)
+	// Get song by ID
+	// (GET /songs/{id})
+	GetSong(ctx context.Context, request GetSongRequestObject) (GetSongResponseObject, error)
 	// Obtain access and refresh tokens
 	// (POST /tokens)
 	GenerateTokens(ctx context.Context, request GenerateTokensRequestObject) (GenerateTokensResponseObject, error)
@@ -518,6 +790,84 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetArtist operation middleware
+func (sh *strictHandler) GetArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetArtistRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetArtist(ctx, request.(GetArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetArtistResponseObject); ok {
+		if err := validResponse.VisitGetArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetRelease operation middleware
+func (sh *strictHandler) GetRelease(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetReleaseRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetRelease(ctx, request.(GetReleaseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetRelease")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetReleaseResponseObject); ok {
+		if err := validResponse.VisitGetReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSong operation middleware
+func (sh *strictHandler) GetSong(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetSongRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSong(ctx, request.(GetSongRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSong")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSongResponseObject); ok {
+		if err := validResponse.VisitGetSongResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GenerateTokens operation middleware

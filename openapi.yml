@@ -137,6 +137,102 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /artists/{id}:
+    get:
+      tags: [Artists]
+      summary: Get artist by ID
+      operationId: getArtist
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Artist details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artist'
+        '404':
+          description: Artist not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to fetch artist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /songs/{id}:
+    get:
+      tags: [Songs]
+      summary: Get song by ID
+      operationId: getSong
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Song details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Song'
+        '404':
+          description: Song not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to fetch song.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /releases/{id}:
+    get:
+      tags: [Releases]
+      summary: Get release by ID
+      operationId: getRelease
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Release details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '404':
+          description: Release not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to fetch release.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -242,6 +338,149 @@ components:
       required:
         - name
         - email
+
+    Artist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+        cover_url:
+          type: string
+          nullable: true
+        followers:
+          type: integer
+        following:
+          type: boolean
+        popularSongs:
+          $ref: '#/components/schemas/SongList'
+        releases:
+          $ref: '#/components/schemas/ReleaseList'
+      required:
+        - id
+        - name
+        - followers
+        - following
+        - popularSongs
+        - releases
+
+    ArtistSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        avatar_url:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+
+    ArtistList:
+      type: object
+      properties:
+        count:
+          type: integer
+        artists:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArtistSummary'
+        names:
+          type: string
+      required:
+        - count
+        - artists
+        - names
+
+    Song:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cover_url:
+          type: string
+          nullable: true
+        is_favorite:
+          type: boolean
+        duration_seconds:
+          type: integer
+        artists:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArtistSummary'
+        stream_url:
+          type: string
+      required:
+        - id
+        - name
+        - is_favorite
+        - duration_seconds
+        - artists
+        - stream_url
+
+    SongList:
+      type: object
+      properties:
+        count:
+          type: integer
+        songs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Song'
+      required:
+        - count
+        - songs
+
+    Release:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cover_url:
+          type: string
+          nullable: true
+        type:
+          type: string
+        released_at:
+          type: string
+        songs:
+          $ref: '#/components/schemas/SongList'
+        artists:
+          $ref: '#/components/schemas/ArtistList'
+      required:
+        - id
+        - name
+        - type
+        - released_at
+        - songs
+        - artists
+
+    ReleaseList:
+      type: object
+      properties:
+        count:
+          type: integer
+        releases:
+          type: array
+          items:
+            $ref: '#/components/schemas/Release'
+      required:
+        - count
+        - releases
 
     Error:
       type: object

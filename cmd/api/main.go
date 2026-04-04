@@ -8,7 +8,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/witelokk/music-api/internal"
+	"github.com/witelokk/music-api/internal/artists"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/releases"
+	"github.com/witelokk/music-api/internal/songs"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
@@ -28,6 +31,9 @@ func main() {
 	defer redis.Close()
 
 	userRespository := auth.NewPostgresUserRepository(db)
+	songsRepository := songs.NewPostgresRepository(db)
+	artistsRepository := artists.NewPostgresRepository(db)
+	releasesRepository := releases.NewPostgresRepository(db)
 	verificationCodeRepository := auth.NewRedisVerificationCodeRepository(redis)
 	refreshTokenRespository := auth.NewRedisRefreshTokenRepository(redis)
 	emailSender := auth.NewMailgunEmailSender(
@@ -51,7 +57,11 @@ func main() {
 		},
 	)
 
-	serverImpl := internal.NewServer(authService, logger)
+	songsService := songs.NewService(songsRepository)
+	artistsService := artists.NewService(artistsRepository)
+	releasesService := releases.NewService(releasesRepository)
+
+	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, logger)
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /openapi.yml", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "openapi.yml")

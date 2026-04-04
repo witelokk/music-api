@@ -5,19 +5,34 @@ import (
 
 	"log/slog"
 
+	"github.com/witelokk/music-api/internal/artists"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/releases"
+	"github.com/witelokk/music-api/internal/songs"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
 type Server struct {
-	authService *auth.AuthService
-	logger      *slog.Logger
+	authService     *auth.AuthService
+	songsService    *songs.Service
+	artistsService  *artists.Service
+	releasesService *releases.Service
+	logger          *slog.Logger
 }
 
-func NewServer(authService *auth.AuthService, logger *slog.Logger) openapi.StrictServerInterface {
+func NewServer(
+	authService *auth.AuthService,
+	songsService *songs.Service,
+	artistsService *artists.Service,
+	releasesService *releases.Service,
+	logger *slog.Logger,
+) openapi.StrictServerInterface {
 	return &Server{
-		authService: authService,
-		logger:      logger,
+		authService:     authService,
+		songsService:    songsService,
+		artistsService:  artistsService,
+		releasesService: releasesService,
+		logger:          logger,
 	}
 }
 
@@ -35,4 +50,16 @@ func (s *Server) GenerateTokens(ctx context.Context, req openapi.GenerateTokensR
 
 func (s *Server) GetCurrentUser(ctx context.Context, req openapi.GetCurrentUserRequestObject) (openapi.GetCurrentUserResponseObject, error) {
 	return auth.HandleGetCurrentUser(ctx, s.authService, s.logger, req)
+}
+
+func (s *Server) GetSong(ctx context.Context, req openapi.GetSongRequestObject) (openapi.GetSongResponseObject, error) {
+	return songs.HandleGetSong(ctx, s.songsService, s.logger, req)
+}
+
+func (s *Server) GetArtist(ctx context.Context, req openapi.GetArtistRequestObject) (openapi.GetArtistResponseObject, error) {
+	return artists.HandleGetArtist(ctx, s.artistsService, s.logger, req)
+}
+
+func (s *Server) GetRelease(ctx context.Context, req openapi.GetReleaseRequestObject) (openapi.GetReleaseResponseObject, error) {
+	return releases.HandleGetRelease(ctx, s.releasesService, s.logger, req)
 }
