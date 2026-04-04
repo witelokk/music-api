@@ -5,8 +5,7 @@ info:
   description: Simple auth API for the Music service.
 
 servers:
-  - url: http://localhost:8081
-    description: Local development server
+  - url: /api
 
 paths:
   /verification-email:
