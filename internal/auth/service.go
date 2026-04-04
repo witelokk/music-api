@@ -17,6 +17,7 @@ var ErrExpiredVerificationCode = errors.New("verification code expired")
 var ErrInvalidRefreshToken = errors.New("invalid refresh token")
 var ErrExpiredRefreshToken = errors.New("refresh token expired")
 var ErrUserAlreadyExists = errors.New("user already exists")
+var ErrInvalidAccessToken = errors.New("invalid access token")
 
 type AuthServiceParams struct {
 	JWTSecret                   string
@@ -123,6 +124,23 @@ func (s *AuthService) GetTokensWithRefreshToken(ctx context.Context, refreshToke
 	}
 
 	return s.generateTokensForUser(ctx, stored.UserID)
+}
+
+func (s *AuthService) GetCurrentUser(ctx context.Context) (*User, error) {
+	userID := UserIDFromContext(ctx)
+	if userID == "" {
+		return nil, ErrInvalidAccessToken
+	}
+
+	user, err := s.userRepository.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return user, nil
 }
 
 func (s *AuthService) validateVerificationCode(ctx context.Context, email, verificationCode string) (*VerificationCode, error) {

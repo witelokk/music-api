@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	openapi "github.com/witelokk/music-api/internal/openapi"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
 func newTestLogger() *slog.Logger {
@@ -360,6 +360,59 @@ func TestHandleGenerateTokens_RefreshGrant_Success(t *testing.T) {
 	}
 	if _, exists := refreshRepo.tokens[okResp.RefreshToken]; !exists {
 		t.Fatalf("expected new refresh token to be stored")
+	}
+}
+
+func TestHandleGetCurrentUser_UnauthorizedWhenNoUserInContext(t *testing.T) {
+	svc, _, _, _, _ := newTestAuthService()
+	logger := newTestLogger()
+	ctx := context.Background()
+
+	req := openapi.GetCurrentUserRequestObject{}
+
+	resp, err := HandleGetCurrentUser(ctx, svc, logger, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	errResp, ok := resp.(openapi.GetCurrentUser401JSONResponse)
+	if !ok {
+		t.Fatalf("expected 401 response, got %T", resp)
+	}
+	if errResp.Error != "unauthorized" {
+		t.Fatalf("expected error %q, got %q", "unauthorized", errResp.Error)
+	}
+}
+
+func TestHandleGetCurrentUser_Success(t *testing.T) {
+	svc, userRepo, _, _, _ := newTestAuthService()
+	logger := newTestLogger()
+	ctx := context.Background()
+
+	user := &User{
+		ID:    "user-id",
+		Name:  "User",
+		Email: "user@example.com",
+	}
+	userRepo.users[user.Email] = user
+	ctx = WithUserID(ctx, user.ID)
+
+	req := openapi.GetCurrentUserRequestObject{}
+
+	resp, err := HandleGetCurrentUser(ctx, svc, logger, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	okResp, ok := resp.(openapi.GetCurrentUser200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+	if okResp.Name != user.Name {
+		t.Fatalf("expected name %q, got %q", user.Name, okResp.Name)
+	}
+	if string(okResp.Email) != user.Email {
+		t.Fatalf("expected email %q, got %q", user.Email, string(okResp.Email))
 	}
 }
 

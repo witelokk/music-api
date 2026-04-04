@@ -46,6 +46,12 @@ type CreateUserRequest struct {
 	Name string `json:"name"`
 }
 
+// CurrentUser defines model for CurrentUser.
+type CurrentUser struct {
+	Email openapi_types.Email `json:"email"`
+	Name  string              `json:"name"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	// Error Human-readable error message.
@@ -112,6 +118,9 @@ type ServerInterface interface {
 	// Create user with verification code
 	// (POST /users)
 	CreateUser(w http.ResponseWriter, r *http.Request)
+	// Get current authenticated user
+	// (GET /users/me)
+	GetCurrentUser(w http.ResponseWriter, r *http.Request)
 	// Send verification email
 	// (POST /verification-email)
 	SendVerificationEmail(w http.ResponseWriter, r *http.Request)
@@ -145,6 +154,20 @@ func (siw *ServerInterfaceWrapper) CreateUser(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateUser(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCurrentUser operation middleware
+func (siw *ServerInterfaceWrapper) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCurrentUser(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -290,6 +313,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
 	m.HandleFunc("POST "+options.BaseURL+"/users", wrapper.CreateUser)
+	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetCurrentUser)
 	m.HandleFunc("POST "+options.BaseURL+"/verification-email", wrapper.SendVerificationEmail)
 
 	return m
@@ -374,6 +398,40 @@ func (response CreateUser500JSONResponse) VisitCreateUserResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetCurrentUserRequestObject struct {
+}
+
+type GetCurrentUserResponseObject interface {
+	VisitGetCurrentUserResponse(w http.ResponseWriter) error
+}
+
+type GetCurrentUser200JSONResponse CurrentUser
+
+func (response GetCurrentUser200JSONResponse) VisitGetCurrentUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCurrentUser401JSONResponse Error
+
+func (response GetCurrentUser401JSONResponse) VisitGetCurrentUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCurrentUser500JSONResponse Error
+
+func (response GetCurrentUser500JSONResponse) VisitGetCurrentUserResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type SendVerificationEmailRequestObject struct {
 	Body *SendVerificationEmailJSONRequestBody
 }
@@ -425,6 +483,9 @@ type StrictServerInterface interface {
 	// Create user with verification code
 	// (POST /users)
 	CreateUser(ctx context.Context, request CreateUserRequestObject) (CreateUserResponseObject, error)
+	// Get current authenticated user
+	// (GET /users/me)
+	GetCurrentUser(ctx context.Context, request GetCurrentUserRequestObject) (GetCurrentUserResponseObject, error)
 	// Send verification email
 	// (POST /verification-email)
 	SendVerificationEmail(ctx context.Context, request SendVerificationEmailRequestObject) (SendVerificationEmailResponseObject, error)
@@ -514,6 +575,30 @@ func (sh *strictHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateUserResponseObject); ok {
 		if err := validResponse.VisitCreateUserResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCurrentUser operation middleware
+func (sh *strictHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+	var request GetCurrentUserRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCurrentUser(ctx, request.(GetCurrentUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCurrentUser")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCurrentUserResponseObject); ok {
+		if err := validResponse.VisitGetCurrentUserResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

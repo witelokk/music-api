@@ -32,3 +32,7 @@ func (s *Server) CreateUser(ctx context.Context, req openapi.CreateUserRequestOb
 func (s *Server) GenerateTokens(ctx context.Context, req openapi.GenerateTokensRequestObject) (openapi.GenerateTokensResponseObject, error) {
 	return auth.HandleGenerateTokens(ctx, s.authService, s.logger, req)
 }
+
+func (s *Server) GetCurrentUser(ctx context.Context, req openapi.GetCurrentUserRequestObject) (openapi.GetCurrentUserResponseObject, error) {
+	return auth.HandleGetCurrentUser(ctx, s.authService, s.logger, req)
+}

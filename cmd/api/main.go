@@ -56,7 +56,13 @@ func main() {
 	mux.HandleFunc("GET /openapi.yml", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "openapi.yml")
 	})
-	handler := openapi.HandlerFromMux(openapi.NewStrictHandler(serverImpl, nil), mux)
+	strictHandler := openapi.NewStrictHandler(
+		serverImpl,
+		[]openapi.StrictMiddlewareFunc{
+			auth.NewJWTMiddleware(config.Auth.JWTSecret, logger),
+		},
+	)
+	handler := openapi.HandlerFromMux(strictHandler, mux)
 
 	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")

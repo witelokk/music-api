@@ -50,6 +50,18 @@ func (r *fakeUserRepository) GetUserByEmail(ctx context.Context, email string) (
 	return u, nil
 }
 
+func (r *fakeUserRepository) GetUserByID(ctx context.Context, id string) (*User, error) {
+	if r.getErr != nil {
+		return nil, r.getErr
+	}
+	for _, u := range r.users {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return nil, nil
+}
+
 type fakeVerificationCodeRepository struct {
 	codesByEmail map[string][]*VerificationCode
 	saveErr      error
@@ -493,5 +505,43 @@ func TestAuthService_GetTokensWithRefreshToken_Expired(t *testing.T) {
 	}
 	if _, ok := refreshRepo.tokens[expired.Token]; !ok {
 		t.Fatalf("expected expired refresh token to remain stored")
+	}
+}
+
+func TestAuthService_GetCurrentUser_Success(t *testing.T) {
+	svc, userRepo, _, _, _ := newTestAuthService()
+	ctx := context.Background()
+
+	user := &User{
+		ID:    "user-id",
+		Name:  "User",
+		Email: "user@example.com",
+	}
+	userRepo.users[user.Email] = user
+
+	ctx = WithUserID(ctx, user.ID)
+
+	got, err := svc.GetCurrentUser(ctx)
+	if err != nil {
+		t.Fatalf("GetCurrentUser() error = %v, want nil", err)
+	}
+	if got == nil {
+		t.Fatalf("expected user, got nil")
+	}
+	if got.ID != user.ID {
+		t.Fatalf("expected user ID %q, got %q", user.ID, got.ID)
+	}
+}
+
+func TestAuthService_GetCurrentUser_InvalidContext(t *testing.T) {
+	svc, _, _, _, _ := newTestAuthService()
+	ctx := context.Background()
+
+	_, err := svc.GetCurrentUser(ctx)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if err != ErrInvalidAccessToken {
+		t.Fatalf("expected ErrInvalidAccessToken, got %v", err)
 	}
 }

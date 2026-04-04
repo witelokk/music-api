@@ -178,3 +178,32 @@ func HandleGenerateTokens(
 		return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "unsupported grant_type"}), nil
 	}
 }
+
+func HandleGetCurrentUser(
+	ctx context.Context,
+	service *AuthService,
+	logger *slog.Logger,
+	req openapi.GetCurrentUserRequestObject,
+) (openapi.GetCurrentUserResponseObject, error) {
+	user, err := service.GetCurrentUser(ctx)
+	if err != nil {
+		if errors.Is(err, ErrInvalidAccessToken) {
+			logger.Warn("invalid or missing user in context for GetCurrentUser",
+				slog.String("error", err.Error()),
+			)
+			return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "unauthorized"}), nil
+		}
+
+		logger.Error("failed to get current user",
+			slog.String("error", err.Error()),
+		)
+		return openapi.GetCurrentUser500JSONResponse(openapi.Error{Error: "failed to fetch current user"}), nil
+	}
+
+	resp := openapi.CurrentUser{
+		Name:  user.Name,
+		Email: openapi_types.Email(user.Email),
+	}
+
+	return openapi.GetCurrentUser200JSONResponse(resp), nil
+}
