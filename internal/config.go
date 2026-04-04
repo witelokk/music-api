@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -16,27 +17,29 @@ type Config struct {
 			Write time.Duration `yaml:"write" env:"TIMEOUT_WRITE" env-default:"5s"`
 			Idle  time.Duration `yaml:"idle" env:"TIMEOUT_IDLE" env-default:"5s"`
 		}
-	}
+	} `yaml:"http_server"`
 
-	Database struct {
-		URL      string `env:"DATABASE_URL" yaml:"database.url"`
-		User     string `env:"DATABASE_USER" yaml:"database.user"`
-		Password string `env:"DATABASE_PASSWORD" yaml:"database.password"`
-	} `yaml:"database"`
+	Auth struct {
+		JWTSecret                   string        `yaml:"jwt_secret" env:"JWT_SECRET" env-required:"true"`
+		AccessTokenTTL              time.Duration `yaml:"access_token_ttl" env:"ACCESS_TOKEN_TTL" env-default:"15m"`
+		RefreshTokenTTL             time.Duration `yaml:"refresh_token_ttl" env:"REFRESH_TOKEN_TTL" env-default:"168h"` // 7 days
+		VerificationCodeTTL         time.Duration `yaml:"verification_code_ttl" env:"VERIFICATION_CODE_TTL" env-default:"15m"`
+		NewVerificationCodeInterval time.Duration `yaml:"new_verification_code_interval" env:"NEW_VERIFICATION_CODE_INTERVAL" env-default:"2m"`
+	} `yaml:"auth"`
 
-	RedisURL  string `env:"REDIS_URL" yaml:"redis.url"`
-	JWTSecret string `env:"JWT_SECRET" yaml:"jwt.secret"`
+	DatabaseURL string `env:"DATABASE_URL" yaml:"database.url" env-required:"true"`
+	RedisURL    string `env:"REDIS_URL" yaml:"redis.url" env-required:"true"`
 
 	Mailgun struct {
-		APIKey string `env:"MAILGUN_API_KEY" yaml:"mailgun.api_key"`
-		Domain string `env:"MAILGUN_DOMAIN" yaml:"mailgun.domain"`
-		From   string `env:"MAILGUN_FROM" yaml:"mailgun.from"`
-		Region string `env:"MAILGUN_REGION" yaml:"mailgun.region"`
+		APIKey string `env:"MAILGUN_API_KEY" yaml:"mailgun.api_key" env-required:"true"`
+		Domain string `env:"MAILGUN_DOMAIN" yaml:"mailgun.domain" env-required:"true"`
+		From   string `env:"MAILGUN_FROM" yaml:"mailgun.from" env-required:"true"`
+		Region string `env:"MAILGUN_REGION" yaml:"mailgun.region" env-required:"true"`
 	} `yaml:"mailgun"`
 
-	GoogleAuth struct {
-		Audience []string `env:"GOOGLE_AUTH_AUDIENCE" env-delim:"," yaml:"google-auth.audience"`
-	} `yaml:"google-auth"`
+	// GoogleAuth struct {
+	// 	Audience []string `env:"GOOGLE_AUTH_AUDIENCE" env-delim:"," yaml:"google-auth.audience"`
+	// } `yaml:"google-auth"`
 
 	Logger struct {
 		Type  string `yaml:"type" env:"LOGGER_TYPE" env-default:"text"`
@@ -59,6 +62,12 @@ func LoadConfig() (*Config, error) {
 
 	if err := cleanenv.ReadEnv(cfg); err != nil {
 		return nil, err
+	}
+
+	switch cfg.Mailgun.Region {
+	case "EU", "US":
+	default:
+		return nil, fmt.Errorf("invalid Mailgun region %q, must be \"EU\" or \"US\"", cfg.Mailgun.Region)
 	}
 
 	return cfg, nil
