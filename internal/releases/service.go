@@ -3,28 +3,18 @@ package releases
 import (
 	"context"
 	"errors"
-
-	"github.com/jackc/pgx/v5"
 )
 
-type Service struct {
-	repo Repository
+type ReleasesService struct {
+	repo ReleasesRepository
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo ReleasesRepository) *ReleasesService {
+	return &ReleasesService{repo: repo}
 }
 
-func (s *Service) GetRelease(ctx context.Context, id string) (*Release, error) {
-	release, err := s.repo.GetReleaseByID(ctx, id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrReleaseNotFound
-		}
-		return nil, err
-	}
-
-	return release, nil
+func (s *ReleasesService) GetRelease(ctx context.Context, id string) (*Release, error) {
+	return s.repo.GetReleaseByID(ctx, id)
 }
 
 var ErrReleaseNotFound = errors.New("release not found")

@@ -6,5 +6,11 @@ type Song struct {
 	CoverURL        *string
 	DurationSeconds int
 	StreamURL       string
+	Artists         []ArtistSummary
 }
 
+type ArtistSummary struct {
+	ID        string
+	Name      string
+	AvatarURL *string
+}

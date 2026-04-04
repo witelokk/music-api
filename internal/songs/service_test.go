@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type fakeSongsRepo struct {
@@ -13,11 +11,14 @@ type fakeSongsRepo struct {
 	err  error
 }
 
-func (r *fakeSongsRepo) GetSongByID(ctx context.Context, id string) (*Song, error) {
-	return r.song, r.err
+func (r *fakeSongsRepo) GetSongWithFavorite(ctx context.Context, id, userID string) (*Song, bool, error) {
+	if r.err != nil {
+		return nil, false, r.err
+	}
+	return r.song, true, nil
 }
 
-func TestService_GetSong_Success(t *testing.T) {
+func TestService_GetSongWithFavorite_Success(t *testing.T) {
 	want := &Song{
 		ID:              "song-id",
 		Name:            "Test Song",
@@ -28,39 +29,35 @@ func TestService_GetSong_Success(t *testing.T) {
 	repo := &fakeSongsRepo{song: want}
 	svc := NewService(repo)
 
-	got, err := svc.GetSong(context.Background(), "song-id")
+	got, isFavorite, err := svc.GetSongWithFavorite(context.Background(), "song-id", "user-id")
 	if err != nil {
-		t.Fatalf("GetSong() error = %v, want nil", err)
+		t.Fatalf("GetSongWithFavorite() error = %v, want nil", err)
 	}
 	if got != want {
-		t.Fatalf("GetSong() = %#v, want %#v", got, want)
+		t.Fatalf("GetSongWithFavorite() = %#v, want %#v", got, want)
+	}
+	if !isFavorite {
+		t.Fatalf("expected isFavorite=true")
 	}
 }
 
-func TestService_GetSong_NotFound(t *testing.T) {
-	repo := &fakeSongsRepo{err: pgx.ErrNoRows}
+func TestService_GetSongWithFavorite_NotFound(t *testing.T) {
+	repo := &fakeSongsRepo{err: ErrSongNotFound}
 	svc := NewService(repo)
 
-	got, err := svc.GetSong(context.Background(), "missing-id")
-	if got != nil {
-		t.Fatalf("expected nil song, got %#v", got)
-	}
+	_, _, err := svc.GetSongWithFavorite(context.Background(), "missing-id", "user-id")
 	if !errors.Is(err, ErrSongNotFound) {
 		t.Fatalf("expected ErrSongNotFound, got %v", err)
 	}
 }
 
-func TestService_GetSong_RepoError(t *testing.T) {
+func TestService_GetSongWithFavorite_RepoError(t *testing.T) {
 	repoErr := errors.New("db error")
 	repo := &fakeSongsRepo{err: repoErr}
 	svc := NewService(repo)
 
-	got, err := svc.GetSong(context.Background(), "song-id")
-	if got != nil {
-		t.Fatalf("expected nil song, got %#v", got)
-	}
+	_, _, err := svc.GetSongWithFavorite(context.Background(), "song-id", "user-id")
 	if !errors.Is(err, repoErr) {
 		t.Fatalf("expected repo error, got %v", err)
 	}
 }
-

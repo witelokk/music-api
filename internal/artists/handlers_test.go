@@ -28,7 +28,7 @@ func TestHandleGetArtist_NotFound(t *testing.T) {
 	id := uuid.New()
 	req := openapi.GetArtistRequestObject{Id: id}
 
-	svcWrapper := &Service{repo: &fakeArtistsRepo{err: ErrArtistNotFound}}
+	svcWrapper := &ArtistsService{repo: &fakeArtistsRepo{err: ErrArtistNotFound}}
 
 	resp, err := HandleGetArtist(context.Background(), svcWrapper, logger, req)
 	if err != nil {
@@ -43,4 +43,3 @@ func TestHandleGetArtist_NotFound(t *testing.T) {
 		t.Fatalf("expected error %q, got %q", "artist not found", errResp.Error)
 	}
 }
-

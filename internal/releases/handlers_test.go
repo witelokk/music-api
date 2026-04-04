@@ -29,7 +29,7 @@ func TestHandleGetRelease_NotFound(t *testing.T) {
 	id := uuid.New()
 	req := openapi.GetReleaseRequestObject{Id: id}
 
-	svcWrapper := &Service{repo: &fakeReleasesRepo{err: ErrReleaseNotFound}}
+	svcWrapper := &ReleasesService{repo: &fakeReleasesRepo{err: ErrReleaseNotFound}}
 
 	resp, err := HandleGetRelease(context.Background(), svcWrapper, logger, req)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestHandleGetRelease_Success(t *testing.T) {
 		ReleaseAt: time.Now(),
 	}
 
-	svc := &Service{repo: &fakeReleasesRepo{release: rel}}
+	svc := &ReleasesService{repo: &fakeReleasesRepo{release: rel}}
 
 	req := openapi.GetReleaseRequestObject{Id: id}
 
@@ -73,4 +73,3 @@ func TestHandleGetRelease_Success(t *testing.T) {
 		t.Fatalf("expected name %q, got %q", rel.Name, okResp.Name)
 	}
 }
-

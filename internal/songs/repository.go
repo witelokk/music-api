@@ -2,26 +2,28 @@ package songs
 
 import (
 	"context"
+	"errors"
 	"sync"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Repository interface {
-	GetSongByID(ctx context.Context, id string) (*Song, error)
+type SongsRepository interface {
+	GetSongWithFavorite(ctx context.Context, id, userID string) (*Song, bool, error)
 }
 
-type PostgresRepository struct {
+type PostgresSongsRepository struct {
 	pool     *pgxpool.Pool
 	initOnce sync.Once
 	initErr  error
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
-	return &PostgresRepository{pool: pool}
+func NewPostgresSongsRepository(pool *pgxpool.Pool) *PostgresSongsRepository {
+	return &PostgresSongsRepository{pool: pool}
 }
 
-func (r *PostgresRepository) ensureTable(ctx context.Context) error {
+func (r *PostgresSongsRepository) ensureTable(ctx context.Context) error {
 	r.initOnce.Do(func() {
 		_, err := r.pool.Exec(ctx, `
 			CREATE TABLE IF NOT EXISTS songs (
@@ -29,7 +31,14 @@ func (r *PostgresRepository) ensureTable(ctx context.Context) error {
 				name TEXT NOT NULL,
 				cover_url TEXT,
 				duration INT NOT NULL,
-				stream_url TEXT NOT NULL
+				stream_url TEXT NOT NULL,
+				streams_count BIGINT NOT NULL DEFAULT 0
+			);
+
+			CREATE TABLE IF NOT EXISTS song_artists (
+				song_id UUID NOT NULL,
+				artist_id UUID NOT NULL,
+				PRIMARY KEY (song_id, artist_id)
 			)
 		`)
 		r.initErr = err
@@ -37,15 +46,28 @@ func (r *PostgresRepository) ensureTable(ctx context.Context) error {
 	return r.initErr
 }
 
-func (r *PostgresRepository) GetSongByID(ctx context.Context, id string) (*Song, error) {
+func (r *PostgresSongsRepository) GetSongWithFavorite(ctx context.Context, id, userID string) (*Song, bool, error) {
 	if err := r.ensureTable(ctx); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	const query = `
-		SELECT id, name, cover_url, duration, stream_url
-		FROM songs
-		WHERE id = $1
+	const songQuery = `
+		SELECT s.id, s.name, s.cover_url, s.duration, s.stream_url,
+		       EXISTS (
+		         SELECT 1
+		         FROM favorites f
+		         WHERE f.user_id = $2 AND f.song_id = s.id
+		       ) AS is_favorite
+		FROM songs s
+		WHERE s.id = $1
+	`
+
+	const artistsQuery = `
+		SELECT a.id, a.name, a.avatar_url
+		FROM song_artists sa
+		JOIN artists a ON a.id = sa.artist_id
+		WHERE sa.song_id = $1
+		ORDER BY a.name
 	`
 
 	var (
@@ -53,12 +75,52 @@ func (r *PostgresRepository) GetSongByID(ctx context.Context, id string) (*Song,
 		coverURL   *string
 		duration   int
 		streamURL  string
+		isFavorite bool
 	)
 
-	if err := r.pool.
-		QueryRow(ctx, query, id).
-		Scan(&id, &name, &coverURL, &duration, &streamURL); err != nil {
-		return nil, err
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, false, err
+	}
+	defer tx.Rollback(ctx)
+
+	if err := tx.
+		QueryRow(ctx, songQuery, id, userID).
+		Scan(&id, &name, &coverURL, &duration, &streamURL, &isFavorite); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, false, ErrSongNotFound
+		}
+		return nil, false, err
+	}
+
+	rows, err := tx.Query(ctx, artistsQuery, id)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+
+	var artists []ArtistSummary
+	for rows.Next() {
+		var (
+			artistID   string
+			artistName string
+			avatarURL  *string
+		)
+		if err := rows.Scan(&artistID, &artistName, &avatarURL); err != nil {
+			return nil, false, err
+		}
+		artists = append(artists, ArtistSummary{
+			ID:        artistID,
+			Name:      artistName,
+			AvatarURL: avatarURL,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, false, err
 	}
 
 	return &Song{
@@ -67,5 +129,6 @@ func (r *PostgresRepository) GetSongByID(ctx context.Context, id string) (*Song,
 		CoverURL:        coverURL,
 		DurationSeconds: duration,
 		StreamURL:       streamURL,
-	}, nil
+		Artists:         artists,
+	}, isFavorite, nil
 }

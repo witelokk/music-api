@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type fakeReleasesRepo struct {
@@ -36,7 +34,7 @@ func TestService_GetRelease_Success(t *testing.T) {
 }
 
 func TestService_GetRelease_NotFound(t *testing.T) {
-	repo := &fakeReleasesRepo{err: pgx.ErrNoRows}
+	repo := &fakeReleasesRepo{err: ErrReleaseNotFound}
 	svc := NewService(repo)
 
 	got, err := svc.GetRelease(context.Background(), "missing-id")
@@ -61,4 +59,3 @@ func TestService_GetRelease_RepoError(t *testing.T) {
 		t.Fatalf("expected repo error, got %v", err)
 	}
 }
-

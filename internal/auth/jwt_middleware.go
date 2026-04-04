@@ -22,7 +22,9 @@ func NewJWTMiddleware(jwtSecret string, logger *slog.Logger) openapi.StrictMiddl
 
 			requiresAuth := func(op string) bool {
 				switch op {
-				case "GetCurrentUser", "GetSong", "GetArtist", "GetRelease":
+				case "GetCurrentUser", "GetSong", "GetArtist", "GetRelease",
+					"GetFavorites", "AddFavorite", "RemoveFavorite",
+					"GetFollowings", "FollowArtist", "UnfollowArtist":
 					return true
 				default:
 					return false

@@ -3,28 +3,18 @@ package artists
 import (
 	"context"
 	"errors"
-
-	"github.com/jackc/pgx/v5"
 )
 
-type Service struct {
-	repo Repository
+type ArtistsService struct {
+	repo ArtistsRepository
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo ArtistsRepository) *ArtistsService {
+	return &ArtistsService{repo: repo}
 }
 
 var ErrArtistNotFound = errors.New("artist not found")
 
-func (s *Service) GetArtist(ctx context.Context, id string) (*Artist, error) {
-	artist, err := s.repo.GetArtistByID(ctx, id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrArtistNotFound
-		}
-		return nil, err
-	}
-
-	return artist, nil
+func (s *ArtistsService) GetArtistWithStats(ctx context.Context, id, userID string) (artist *Artist, followers int, isFollowing bool, err error) {
+	return s.repo.GetArtistWithStats(ctx, id, userID)
 }

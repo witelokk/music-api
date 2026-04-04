@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type fakeArtistsRepo struct {
@@ -13,11 +11,14 @@ type fakeArtistsRepo struct {
 	err    error
 }
 
-func (r *fakeArtistsRepo) GetArtistByID(ctx context.Context, id string) (*Artist, error) {
-	return r.artist, r.err
+func (r *fakeArtistsRepo) GetArtistWithStats(ctx context.Context, id, userID string) (*Artist, int, bool, error) {
+	if r.err != nil {
+		return nil, 0, false, r.err
+	}
+	return r.artist, 0, false, nil
 }
 
-func TestService_GetArtist_Success(t *testing.T) {
+func TestService_GetArtistWithStats_Success(t *testing.T) {
 	want := &Artist{
 		ID:   "artist-id",
 		Name: "Test Artist",
@@ -26,39 +27,35 @@ func TestService_GetArtist_Success(t *testing.T) {
 	repo := &fakeArtistsRepo{artist: want}
 	svc := NewService(repo)
 
-	got, err := svc.GetArtist(context.Background(), "artist-id")
+	got, followers, following, err := svc.GetArtistWithStats(context.Background(), "artist-id", "user-id")
 	if err != nil {
-		t.Fatalf("GetArtist() error = %v, want nil", err)
+		t.Fatalf("GetArtistWithStats() error = %v, want nil", err)
 	}
 	if got != want {
-		t.Fatalf("GetArtist() = %#v, want %#v", got, want)
+		t.Fatalf("GetArtistWithStats() artist = %#v, want %#v", got, want)
+	}
+	if followers != 0 || following {
+		t.Fatalf("expected followers=0 and following=false, got followers=%d following=%v", followers, following)
 	}
 }
 
-func TestService_GetArtist_NotFound(t *testing.T) {
-	repo := &fakeArtistsRepo{err: pgx.ErrNoRows}
+func TestService_GetArtistWithStats_NotFound(t *testing.T) {
+	repo := &fakeArtistsRepo{err: ErrArtistNotFound}
 	svc := NewService(repo)
 
-	got, err := svc.GetArtist(context.Background(), "missing-id")
-	if got != nil {
-		t.Fatalf("expected nil artist, got %#v", got)
-	}
+	_, _, _, err := svc.GetArtistWithStats(context.Background(), "missing-id", "user-id")
 	if !errors.Is(err, ErrArtistNotFound) {
 		t.Fatalf("expected ErrArtistNotFound, got %v", err)
 	}
 }
 
-func TestService_GetArtist_RepoError(t *testing.T) {
+func TestService_GetArtistWithStats_RepoError(t *testing.T) {
 	repoErr := errors.New("db error")
 	repo := &fakeArtistsRepo{err: repoErr}
 	svc := NewService(repo)
 
-	got, err := svc.GetArtist(context.Background(), "artist-id")
-	if got != nil {
-		t.Fatalf("expected nil artist, got %#v", got)
-	}
+	_, _, _, err := svc.GetArtistWithStats(context.Background(), "artist-id", "user-id")
 	if !errors.Is(err, repoErr) {
 		t.Fatalf("expected repo error, got %v", err)
 	}
 }
-

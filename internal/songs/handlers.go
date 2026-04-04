@@ -6,13 +6,14 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/witelokk/music-api/internal/requestctx"
+	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
+	"github.com/witelokk/music-api/internal/requestctx"
 )
 
 func HandleGetSong(
 	ctx context.Context,
-	service *Service,
+	songsService *SongsService,
 	logger *slog.Logger,
 	req openapi.GetSongRequestObject,
 ) (openapi.GetSongResponseObject, error) {
@@ -20,7 +21,9 @@ func HandleGetSong(
 
 	id := req.Id
 
-	song, err := service.GetSong(ctx, id.String())
+	userID := auth.UserIDFromContext(ctx)
+
+	song, isFavorite, err := songsService.GetSongWithFavorite(ctx, id.String(), userID)
 	if err != nil {
 		if errors.Is(err, ErrSongNotFound) {
 			return openapi.GetSong404JSONResponse(openapi.Error{Error: "song not found"}), nil
@@ -33,14 +36,25 @@ func HandleGetSong(
 		return openapi.GetSong500JSONResponse(openapi.Error{Error: "failed to fetch song"}), nil
 	}
 
-	// For now, no favorites & artists logic is implemented.
+	artistSummaries := make([]openapi.ArtistSummary, 0, len(song.Artists))
+	for _, a := range song.Artists {
+		summary := openapi.ArtistSummary{
+			Id:   uuid.MustParse(a.ID),
+			Name: a.Name,
+		}
+		if a.AvatarURL != nil {
+			summary.AvatarUrl = a.AvatarURL
+		}
+		artistSummaries = append(artistSummaries, summary)
+	}
+
 	resp := openapi.Song{
 		Id:              uuid.MustParse(song.ID),
 		Name:            song.Name,
 		DurationSeconds: song.DurationSeconds,
 		StreamUrl:       song.StreamURL,
-		IsFavorite:      false,
-		Artists:         []openapi.ArtistSummary{},
+		IsFavorite:      isFavorite,
+		Artists:         artistSummaries,
 	}
 	if song.CoverURL != nil {
 		resp.CoverUrl = song.CoverURL

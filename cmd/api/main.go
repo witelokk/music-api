@@ -10,6 +10,8 @@ import (
 	"github.com/witelokk/music-api/internal"
 	"github.com/witelokk/music-api/internal/artists"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/favorites"
+	"github.com/witelokk/music-api/internal/followings"
 	"github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/songs"
 )
@@ -30,9 +32,11 @@ func main() {
 	defer redis.Close()
 
 	userRespository := auth.NewPostgresUserRepository(db)
-	songsRepository := songs.NewPostgresRepository(db)
-	artistsRepository := artists.NewPostgresRepository(db)
-	releasesRepository := releases.NewPostgresRepository(db)
+	songsRepository := songs.NewPostgresSongsRepository(db)
+	artistsRepository := artists.NewPostgresArtistsRepository(db)
+	releasesRepository := releases.NewPostgresReleasesRepository(db)
+	favoritesRepository := favorites.NewPostgresFavoritesRepository(db)
+	followingsRepository := followings.NewPostgresFollowingsRepository(db)
 	verificationCodeRepository := auth.NewRedisVerificationCodeRepository(redis)
 	refreshTokenRespository := auth.NewRedisRefreshTokenRepository(redis)
 	emailSender := auth.NewMailgunEmailSender(
@@ -59,8 +63,10 @@ func main() {
 	songsService := songs.NewService(songsRepository)
 	artistsService := artists.NewService(artistsRepository)
 	releasesService := releases.NewService(releasesRepository)
+	favoritesService := favorites.NewFavoritesService(favoritesRepository)
+	followingsService := followings.NewFollowingsService(followingsRepository)
 
-	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, logger)
+	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, favoritesService, followingsService, logger)
 	httpHandler := internal.NewHTTPHandler(
 		serverImpl,
 		internal.HTTPHandlerConfig{

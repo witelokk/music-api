@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
@@ -19,7 +20,7 @@ func TestHandleGetSong_NotFound(t *testing.T) {
 	id := uuid.New()
 	req := openapi.GetSongRequestObject{Id: id}
 
-	svc := &Service{repo: &fakeSongsRepo{err: ErrSongNotFound}}
+	svc := &SongsService{repo: &fakeSongsRepo{err: ErrSongNotFound}}
 
 	resp, err := HandleGetSong(context.Background(), svc, logger, req)
 	if err != nil {
@@ -46,11 +47,13 @@ func TestHandleGetSong_Success(t *testing.T) {
 		StreamURL:       "https://example.com/stream",
 	}
 
-	svc := &Service{repo: &fakeSongsRepo{song: song}}
+	svc := &SongsService{repo: &fakeSongsRepo{song: song}}
 
 	req := openapi.GetSongRequestObject{Id: id}
 
-	resp, err := HandleGetSong(context.Background(), svc, logger, req)
+	ctx := auth.WithUserID(context.Background(), "user-id")
+
+	resp, err := HandleGetSong(ctx, svc, logger, req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -62,5 +65,7 @@ func TestHandleGetSong_Success(t *testing.T) {
 	if okResp.Name != song.Name {
 		t.Fatalf("expected name %q, got %q", song.Name, okResp.Name)
 	}
+	if !okResp.IsFavorite {
+		t.Fatalf("expected IsFavorite to be true")
+	}
 }
-

@@ -89,6 +89,16 @@ type Error struct {
 	Error string `json:"error"`
 }
 
+// FavoriteSongRequest defines model for FavoriteSongRequest.
+type FavoriteSongRequest struct {
+	SongId openapi_types.UUID `json:"song_id"`
+}
+
+// FollowArtistRequest defines model for FollowArtistRequest.
+type FollowArtistRequest struct {
+	ArtistId openapi_types.UUID `json:"artist_id"`
+}
+
 // GetTokensRequest Request to obtain tokens.
 // - For `grant_type` = `code`, `email` and `code` are required.
 // - For `grant_type` = `refresh_token`, `refresh_token` is required.
@@ -166,6 +176,18 @@ type User struct {
 	Name      string              `json:"name"`
 }
 
+// RemoveFavoriteJSONRequestBody defines body for RemoveFavorite for application/json ContentType.
+type RemoveFavoriteJSONRequestBody = FavoriteSongRequest
+
+// AddFavoriteJSONRequestBody defines body for AddFavorite for application/json ContentType.
+type AddFavoriteJSONRequestBody = FavoriteSongRequest
+
+// UnfollowArtistJSONRequestBody defines body for UnfollowArtist for application/json ContentType.
+type UnfollowArtistJSONRequestBody = FollowArtistRequest
+
+// FollowArtistJSONRequestBody defines body for FollowArtist for application/json ContentType.
+type FollowArtistJSONRequestBody = FollowArtistRequest
+
 // GenerateTokensJSONRequestBody defines body for GenerateTokens for application/json ContentType.
 type GenerateTokensJSONRequestBody = GetTokensRequest
 
@@ -180,6 +202,24 @@ type ServerInterface interface {
 	// Get artist by ID
 	// (GET /artists/{id})
 	GetArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Remove song from favorites
+	// (DELETE /favorites)
+	RemoveFavorite(w http.ResponseWriter, r *http.Request)
+	// Get favorite songs
+	// (GET /favorites)
+	GetFavorites(w http.ResponseWriter, r *http.Request)
+	// Add song to favorites
+	// (POST /favorites)
+	AddFavorite(w http.ResponseWriter, r *http.Request)
+	// Unfollow an artist
+	// (DELETE /followings)
+	UnfollowArtist(w http.ResponseWriter, r *http.Request)
+	// Get followed artists
+	// (GET /followings)
+	GetFollowings(w http.ResponseWriter, r *http.Request)
+	// Follow an artist
+	// (POST /followings)
+	FollowArtist(w http.ResponseWriter, r *http.Request)
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -223,8 +263,134 @@ func (siw *ServerInterfaceWrapper) GetArtist(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetArtist(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveFavorite operation middleware
+func (siw *ServerInterfaceWrapper) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveFavorite(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFavorites operation middleware
+func (siw *ServerInterfaceWrapper) GetFavorites(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFavorites(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddFavorite operation middleware
+func (siw *ServerInterfaceWrapper) AddFavorite(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddFavorite(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnfollowArtist operation middleware
+func (siw *ServerInterfaceWrapper) UnfollowArtist(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnfollowArtist(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetFollowings operation middleware
+func (siw *ServerInterfaceWrapper) GetFollowings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFollowings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FollowArtist operation middleware
+func (siw *ServerInterfaceWrapper) FollowArtist(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FollowArtist(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -247,6 +413,12 @@ func (siw *ServerInterfaceWrapper) GetRelease(w http.ResponseWriter, r *http.Req
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetRelease(w, r, id)
@@ -272,6 +444,12 @@ func (siw *ServerInterfaceWrapper) GetSong(w http.ResponseWriter, r *http.Reques
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
 		return
 	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSong(w, r, id)
@@ -467,6 +645,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("GET "+options.BaseURL+"/artists/{id}", wrapper.GetArtist)
+	m.HandleFunc("DELETE "+options.BaseURL+"/favorites", wrapper.RemoveFavorite)
+	m.HandleFunc("GET "+options.BaseURL+"/favorites", wrapper.GetFavorites)
+	m.HandleFunc("POST "+options.BaseURL+"/favorites", wrapper.AddFavorite)
+	m.HandleFunc("DELETE "+options.BaseURL+"/followings", wrapper.UnfollowArtist)
+	m.HandleFunc("GET "+options.BaseURL+"/followings", wrapper.GetFollowings)
+	m.HandleFunc("POST "+options.BaseURL+"/followings", wrapper.FollowArtist)
 	m.HandleFunc("GET "+options.BaseURL+"/releases/{id}", wrapper.GetRelease)
 	m.HandleFunc("GET "+options.BaseURL+"/songs/{id}", wrapper.GetSong)
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
@@ -506,6 +690,228 @@ func (response GetArtist404JSONResponse) VisitGetArtistResponse(w http.ResponseW
 type GetArtist500JSONResponse Error
 
 func (response GetArtist500JSONResponse) VisitGetArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveFavoriteRequestObject struct {
+	Body *RemoveFavoriteJSONRequestBody
+}
+
+type RemoveFavoriteResponseObject interface {
+	VisitRemoveFavoriteResponse(w http.ResponseWriter) error
+}
+
+type RemoveFavorite204Response struct {
+}
+
+func (response RemoveFavorite204Response) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveFavorite400JSONResponse Error
+
+func (response RemoveFavorite400JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveFavorite404JSONResponse Error
+
+func (response RemoveFavorite404JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveFavorite500JSONResponse Error
+
+func (response RemoveFavorite500JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetFavoritesRequestObject struct {
+}
+
+type GetFavoritesResponseObject interface {
+	VisitGetFavoritesResponse(w http.ResponseWriter) error
+}
+
+type GetFavorites200JSONResponse SongList
+
+func (response GetFavorites200JSONResponse) VisitGetFavoritesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetFavorites500JSONResponse Error
+
+func (response GetFavorites500JSONResponse) VisitGetFavoritesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddFavoriteRequestObject struct {
+	Body *AddFavoriteJSONRequestBody
+}
+
+type AddFavoriteResponseObject interface {
+	VisitAddFavoriteResponse(w http.ResponseWriter) error
+}
+
+type AddFavorite204Response struct {
+}
+
+func (response AddFavorite204Response) VisitAddFavoriteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AddFavorite400JSONResponse Error
+
+func (response AddFavorite400JSONResponse) VisitAddFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddFavorite404JSONResponse Error
+
+func (response AddFavorite404JSONResponse) VisitAddFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddFavorite500JSONResponse Error
+
+func (response AddFavorite500JSONResponse) VisitAddFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnfollowArtistRequestObject struct {
+	Body *UnfollowArtistJSONRequestBody
+}
+
+type UnfollowArtistResponseObject interface {
+	VisitUnfollowArtistResponse(w http.ResponseWriter) error
+}
+
+type UnfollowArtist204Response struct {
+}
+
+func (response UnfollowArtist204Response) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnfollowArtist400JSONResponse Error
+
+func (response UnfollowArtist400JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnfollowArtist404JSONResponse Error
+
+func (response UnfollowArtist404JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnfollowArtist500JSONResponse Error
+
+func (response UnfollowArtist500JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetFollowingsRequestObject struct {
+}
+
+type GetFollowingsResponseObject interface {
+	VisitGetFollowingsResponse(w http.ResponseWriter) error
+}
+
+type GetFollowings200JSONResponse ArtistList
+
+func (response GetFollowings200JSONResponse) VisitGetFollowingsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetFollowings500JSONResponse Error
+
+func (response GetFollowings500JSONResponse) VisitGetFollowingsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FollowArtistRequestObject struct {
+	Body *FollowArtistJSONRequestBody
+}
+
+type FollowArtistResponseObject interface {
+	VisitFollowArtistResponse(w http.ResponseWriter) error
+}
+
+type FollowArtist204Response struct {
+}
+
+func (response FollowArtist204Response) VisitFollowArtistResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type FollowArtist400JSONResponse Error
+
+func (response FollowArtist400JSONResponse) VisitFollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FollowArtist404JSONResponse Error
+
+func (response FollowArtist404JSONResponse) VisitFollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type FollowArtist500JSONResponse Error
+
+func (response FollowArtist500JSONResponse) VisitFollowArtistResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -743,6 +1149,24 @@ type StrictServerInterface interface {
 	// Get artist by ID
 	// (GET /artists/{id})
 	GetArtist(ctx context.Context, request GetArtistRequestObject) (GetArtistResponseObject, error)
+	// Remove song from favorites
+	// (DELETE /favorites)
+	RemoveFavorite(ctx context.Context, request RemoveFavoriteRequestObject) (RemoveFavoriteResponseObject, error)
+	// Get favorite songs
+	// (GET /favorites)
+	GetFavorites(ctx context.Context, request GetFavoritesRequestObject) (GetFavoritesResponseObject, error)
+	// Add song to favorites
+	// (POST /favorites)
+	AddFavorite(ctx context.Context, request AddFavoriteRequestObject) (AddFavoriteResponseObject, error)
+	// Unfollow an artist
+	// (DELETE /followings)
+	UnfollowArtist(ctx context.Context, request UnfollowArtistRequestObject) (UnfollowArtistResponseObject, error)
+	// Get followed artists
+	// (GET /followings)
+	GetFollowings(ctx context.Context, request GetFollowingsRequestObject) (GetFollowingsResponseObject, error)
+	// Follow an artist
+	// (POST /followings)
+	FollowArtist(ctx context.Context, request FollowArtistRequestObject) (FollowArtistResponseObject, error)
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(ctx context.Context, request GetReleaseRequestObject) (GetReleaseResponseObject, error)
@@ -811,6 +1235,178 @@ func (sh *strictHandler) GetArtist(w http.ResponseWriter, r *http.Request, id op
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetArtistResponseObject); ok {
 		if err := validResponse.VisitGetArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveFavorite operation middleware
+func (sh *strictHandler) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
+	var request RemoveFavoriteRequestObject
+
+	var body RemoveFavoriteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveFavorite(ctx, request.(RemoveFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveFavoriteResponseObject); ok {
+		if err := validResponse.VisitRemoveFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetFavorites operation middleware
+func (sh *strictHandler) GetFavorites(w http.ResponseWriter, r *http.Request) {
+	var request GetFavoritesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFavorites(ctx, request.(GetFavoritesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFavorites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetFavoritesResponseObject); ok {
+		if err := validResponse.VisitGetFavoritesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddFavorite operation middleware
+func (sh *strictHandler) AddFavorite(w http.ResponseWriter, r *http.Request) {
+	var request AddFavoriteRequestObject
+
+	var body AddFavoriteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddFavorite(ctx, request.(AddFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddFavoriteResponseObject); ok {
+		if err := validResponse.VisitAddFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnfollowArtist operation middleware
+func (sh *strictHandler) UnfollowArtist(w http.ResponseWriter, r *http.Request) {
+	var request UnfollowArtistRequestObject
+
+	var body UnfollowArtistJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnfollowArtist(ctx, request.(UnfollowArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnfollowArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnfollowArtistResponseObject); ok {
+		if err := validResponse.VisitUnfollowArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetFollowings operation middleware
+func (sh *strictHandler) GetFollowings(w http.ResponseWriter, r *http.Request) {
+	var request GetFollowingsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFollowings(ctx, request.(GetFollowingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFollowings")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetFollowingsResponseObject); ok {
+		if err := validResponse.VisitGetFollowingsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FollowArtist operation middleware
+func (sh *strictHandler) FollowArtist(w http.ResponseWriter, r *http.Request) {
+	var request FollowArtistRequestObject
+
+	var body FollowArtistJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.FollowArtist(ctx, request.(FollowArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FollowArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FollowArtistResponseObject); ok {
+		if err := validResponse.VisitFollowArtistResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
