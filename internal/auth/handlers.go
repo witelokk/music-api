@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/witelokk/music-api/internal/requestctx"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
@@ -17,6 +18,7 @@ func HandleSendVerificationEmail(
 	logger *slog.Logger,
 	req openapi.SendVerificationEmailRequestObject,
 ) (openapi.SendVerificationEmailResponseObject, error) {
+	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 	if req.Body == nil {
 		return openapi.SendVerificationEmail400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
 	}
@@ -36,7 +38,7 @@ func HandleSendVerificationEmail(
 			return openapi.SendVerificationEmail429JSONResponse(openapi.Error{Error: "verification code recently sent"}), nil
 		}
 
-		logger.Error("failed to send verification email",
+		reqLogger.Error("failed to send verification email",
 			slog.String("email", string(body.Email)),
 			slog.String("error", err.Error()),
 		)
@@ -53,6 +55,7 @@ func HandleCreateUser(
 	logger *slog.Logger,
 	req openapi.CreateUserRequestObject,
 ) (openapi.CreateUserResponseObject, error) {
+	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 	if req.Body == nil {
 		return openapi.CreateUser400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
 	}
@@ -89,7 +92,7 @@ func HandleCreateUser(
 		case errors.Is(err, ErrUserAlreadyExists):
 			return openapi.CreateUser409JSONResponse(openapi.Error{Error: "user already exists"}), nil
 		default:
-			logger.Error("failed to create user",
+			reqLogger.Error("failed to create user",
 				slog.String("email", string(body.Email)),
 				slog.String("error", err.Error()),
 			)
@@ -113,6 +116,7 @@ func HandleGenerateTokens(
 	logger *slog.Logger,
 	req openapi.GenerateTokensRequestObject,
 ) (openapi.GenerateTokensResponseObject, error) {
+	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 	if req.Body == nil {
 		return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
 	}
@@ -136,7 +140,7 @@ func HandleGenerateTokens(
 			case errors.Is(err, ErrExpiredVerificationCode):
 				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "verification code expired"}), nil
 			default:
-				logger.Error("failed to get tokens with verification code",
+				reqLogger.Error("failed to get tokens with verification code",
 					slog.String("email", string(*body.Email)),
 					slog.String("error", err.Error()),
 				)
@@ -162,7 +166,7 @@ func HandleGenerateTokens(
 			case errors.Is(err, ErrExpiredRefreshToken):
 				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "refresh token expired"}), nil
 			default:
-				logger.Error("failed to get tokens with refresh token",
+				reqLogger.Error("failed to get tokens with refresh token",
 					slog.String("error", err.Error()),
 				)
 				return openapi.GenerateTokens500JSONResponse(openapi.Error{Error: "failed to get tokens"}), nil
@@ -185,16 +189,18 @@ func HandleGetCurrentUser(
 	logger *slog.Logger,
 	req openapi.GetCurrentUserRequestObject,
 ) (openapi.GetCurrentUserResponseObject, error) {
+	reqLogger := requestctx.LoggerFromContext(ctx, logger)
+
 	user, err := service.GetCurrentUser(ctx)
 	if err != nil {
 		if errors.Is(err, ErrInvalidAccessToken) {
-			logger.Warn("invalid or missing user in context for GetCurrentUser",
+			reqLogger.Warn("invalid or missing user in context for GetCurrentUser",
 				slog.String("error", err.Error()),
 			)
 			return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "unauthorized"}), nil
 		}
 
-		logger.Error("failed to get current user",
+		reqLogger.Error("failed to get current user",
 			slog.String("error", err.Error()),
 		)
 		return openapi.GetCurrentUser500JSONResponse(openapi.Error{Error: "failed to fetch current user"}), nil

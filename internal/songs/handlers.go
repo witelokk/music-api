@@ -2,10 +2,11 @@ package songs
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/witelokk/music-api/internal/requestctx"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
@@ -15,15 +16,17 @@ func HandleGetSong(
 	logger *slog.Logger,
 	req openapi.GetSongRequestObject,
 ) (openapi.GetSongResponseObject, error) {
+	reqLogger := requestctx.LoggerFromContext(ctx, logger)
+
 	id := req.Id
 
 	song, err := service.GetSong(ctx, id.String())
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, ErrSongNotFound) {
 			return openapi.GetSong404JSONResponse(openapi.Error{Error: "song not found"}), nil
 		}
 
-		logger.Error("failed to get song",
+		reqLogger.Error("failed to get song",
 			slog.String("id", id.String()),
 			slog.String("error", err.Error()),
 		)
@@ -45,4 +48,3 @@ func HandleGetSong(
 
 	return openapi.GetSong200JSONResponse(resp), nil
 }
-

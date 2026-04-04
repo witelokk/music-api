@@ -12,7 +12,6 @@ import (
 	"github.com/witelokk/music-api/internal/auth"
 	"github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/songs"
-	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
 func main() {
@@ -62,34 +61,17 @@ func main() {
 	releasesService := releases.NewService(releasesRepository)
 
 	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, logger)
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /openapi.yml", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "openapi.yml")
-	})
-	strictHandler := openapi.NewStrictHandler(
+	httpHandler := internal.NewHTTPHandler(
 		serverImpl,
-		[]openapi.StrictMiddlewareFunc{
-			auth.NewJWTMiddleware(config.Auth.JWTSecret, logger),
+		internal.HTTPHandlerConfig{
+			JWTSecret: config.Auth.JWTSecret,
 		},
+		logger,
 	)
-	handler := openapi.HandlerFromMux(strictHandler, mux)
-
-	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-	})
 
 	server := &http.Server{
 		Addr:         config.HttpServer.Host + ":" + config.HttpServer.Port,
-		Handler:      corsHandler,
+		Handler:      httpHandler,
 		ReadTimeout:  config.HttpServer.Timeouts.Read,
 		WriteTimeout: config.HttpServer.Timeouts.Write,
 		IdleTimeout:  config.HttpServer.Timeouts.Idle,

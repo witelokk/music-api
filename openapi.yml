@@ -142,6 +142,8 @@ paths:
       tags: [Artists]
       summary: Get artist by ID
       operationId: getArtist
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
@@ -174,6 +176,8 @@ paths:
       tags: [Songs]
       summary: Get song by ID
       operationId: getSong
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
@@ -206,6 +210,8 @@ paths:
       tags: [Releases]
       summary: Get release by ID
       operationId: getRelease
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id

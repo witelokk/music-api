@@ -2,6 +2,7 @@ package releases
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -12,14 +13,36 @@ type Repository interface {
 }
 
 type PostgresRepository struct {
-	pool *pgxpool.Pool
+	pool     *pgxpool.Pool
+	initOnce sync.Once
+	initErr  error
 }
 
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
+func (r *PostgresRepository) ensureTable(ctx context.Context) error {
+	r.initOnce.Do(func() {
+		_, err := r.pool.Exec(ctx, `
+			CREATE TABLE IF NOT EXISTS releases (
+				id UUID PRIMARY KEY,
+				name TEXT NOT NULL,
+				cover_url TEXT,
+				type INT NOT NULL,
+				release_at TIMESTAMP NOT NULL
+			)
+		`)
+		r.initErr = err
+	})
+	return r.initErr
+}
+
 func (r *PostgresRepository) GetReleaseByID(ctx context.Context, id string) (*Release, error) {
+	if err := r.ensureTable(ctx); err != nil {
+		return nil, err
+	}
+
 	const query = `
 		SELECT id, name, cover_url, type, release_at
 		FROM releases
@@ -47,4 +70,3 @@ func (r *PostgresRepository) GetReleaseByID(ctx context.Context, id string) (*Re
 		ReleaseAt: releaseAt,
 	}, nil
 }
-

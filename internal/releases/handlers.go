@@ -2,11 +2,12 @@ package releases
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"log/slog"
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/witelokk/music-api/internal/requestctx"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
@@ -16,15 +17,17 @@ func HandleGetRelease(
 	logger *slog.Logger,
 	req openapi.GetReleaseRequestObject,
 ) (openapi.GetReleaseResponseObject, error) {
+	reqLogger := requestctx.LoggerFromContext(ctx, logger)
+
 	id := req.Id
 
 	release, err := service.GetRelease(ctx, id.String())
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, ErrReleaseNotFound) {
 			return openapi.GetRelease404JSONResponse(openapi.Error{Error: "release not found"}), nil
 		}
 
-		logger.Error("failed to get release",
+		reqLogger.Error("failed to get release",
 			slog.String("id", id.String()),
 			slog.String("error", err.Error()),
 		)
@@ -50,4 +53,3 @@ func HandleGetRelease(
 
 	return openapi.GetRelease200JSONResponse(resp), nil
 }
-

@@ -2,10 +2,11 @@ package artists
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/witelokk/music-api/internal/requestctx"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
@@ -15,15 +16,17 @@ func HandleGetArtist(
 	logger *slog.Logger,
 	req openapi.GetArtistRequestObject,
 ) (openapi.GetArtistResponseObject, error) {
+	reqLogger := requestctx.LoggerFromContext(ctx, logger)
+
 	id := req.Id
 
 	artist, err := service.GetArtist(ctx, id.String())
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, ErrArtistNotFound) {
 			return openapi.GetArtist404JSONResponse(openapi.Error{Error: "artist not found"}), nil
 		}
 
-		logger.Error("failed to get artist",
+		reqLogger.Error("failed to get artist",
 			slog.String("id", id.String()),
 			slog.String("error", err.Error()),
 		)
@@ -48,4 +51,3 @@ func HandleGetArtist(
 
 	return openapi.GetArtist200JSONResponse(resp), nil
 }
-
