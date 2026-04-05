@@ -8,6 +8,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o music-api ./cmd/api
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/music-api .
+COPY openapi.yml .
 ENV HOST=0.0.0.0
 ENV PORT=8080
 EXPOSE 8080

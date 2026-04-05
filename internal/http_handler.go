@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	swgui "github.com/swaggest/swgui"
+	swguiv3 "github.com/swaggest/swgui/v3"
 	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
@@ -23,6 +25,19 @@ func NewHTTPHandler(
 	mux.HandleFunc("GET /openapi.yml", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "openapi.yml")
 	})
+
+	mux.Handle("/docs/", swguiv3.NewWithConfig(
+		swgui.Config{
+			ShowTopBar: true,
+			SettingsUI: map[string]string{
+				"defaultModelsExpandDepth": "1", // enable Schemas section
+			},
+		},
+	)(
+		"Music API",
+		"/openapi.yml",
+		"/docs/",
+	))
 
 	strictHandler := openapi.NewStrictHandlerWithOptions(
 		serverImpl,
@@ -46,7 +61,7 @@ func NewHTTPHandler(
 		},
 	)
 
-	handler := openapi.HandlerFromMux(strictHandler, mux)
+	handler := openapi.HandlerFromMuxWithBaseURL(strictHandler, mux, "/api")
 
 	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
