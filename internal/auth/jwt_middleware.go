@@ -20,18 +20,10 @@ func NewJWTMiddleware(jwtSecret string, logger *slog.Logger) openapi.StrictMiddl
 		return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 			reqLogger := requestctx.LoggerFromContext(ctx, logger)
 
-			requiresAuth := func(op string) bool {
-				switch op {
-				case "GetCurrentUser", "GetSong", "GetArtist", "GetRelease",
-					"GetFavorites", "AddFavorite", "RemoveFavorite",
-					"GetFollowings", "FollowArtist", "UnfollowArtist":
-					return true
-				default:
-					return false
-				}
-			}
-
-			if !requiresAuth(operationID) {
+			// Only enforce JWT auth for operations that declare bearerAuth security
+			// in the OpenAPI specification. The oapi-codegen wrapper sets the
+			// BearerAuthScopes context value for such operations.
+			if ctx.Value(openapi.BearerAuthScopes) == nil {
 				return next(ctx, w, r, request)
 			}
 

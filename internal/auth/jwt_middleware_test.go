@@ -16,6 +16,9 @@ func TestJWTMiddleware_MissingAuthorizationHeader(t *testing.T) {
 
 	mw := NewJWTMiddleware("test-secret", logger)
 
+	// Simulate a protected operation by setting BearerAuthScopes
+	ctx := context.WithValue(context.Background(), openapi.BearerAuthScopes, []string{})
+
 	called := false
 	next := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		called = true
@@ -27,7 +30,7 @@ func TestJWTMiddleware_MissingAuthorizationHeader(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/users/me", nil)
 	w := httptest.NewRecorder()
 
-	resp, err := handler(context.Background(), w, req, nil)
+	resp, err := handler(ctx, w, req, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -72,7 +75,9 @@ func TestJWTMiddleware_ValidToken_PopulatesContextAndCallsNext(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 
-	_, err = handler(context.Background(), w, req, nil)
+	ctx := context.WithValue(context.Background(), openapi.BearerAuthScopes, []string{})
+
+	_, err = handler(ctx, w, req, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
