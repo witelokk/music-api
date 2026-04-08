@@ -20,6 +20,8 @@ tags:
     description: Endpoints for viewing, adding, and removing favorite songs for the current user.
   - name: Followings
     description: Endpoints for viewing, following, and unfollowing artists for the current user.
+  - name: Media
+    description: Endpoints for serving media files such as audio streams and images.
 
 paths:
   /favorites:
@@ -357,6 +359,41 @@ paths:
                 $ref: '#/components/schemas/Error'
         '500':
           description: Failed to fetch artist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media/{id}:
+    get:
+      tags: [Media]
+      summary: Get media file
+      operationId: getMedia
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Media file bytes.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Media not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to fetch media.
           content:
             application/json:
               schema:

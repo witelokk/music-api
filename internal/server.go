@@ -9,6 +9,7 @@ import (
 	"github.com/witelokk/music-api/internal/auth"
 	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/followings"
+	"github.com/witelokk/music-api/internal/media"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/songs"
@@ -21,6 +22,7 @@ type Server struct {
 	releasesService   *releases.ReleasesService
 	favoritesService  *favorites.FavoritesService
 	followingsService *followings.FollowingsService
+	mediaService      *media.MediaService
 	logger            *slog.Logger
 }
 
@@ -31,6 +33,7 @@ func NewServer(
 	releasesService *releases.ReleasesService,
 	favoritesService *favorites.FavoritesService,
 	followingsService *followings.FollowingsService,
+	mediaService *media.MediaService,
 	logger *slog.Logger,
 ) openapi.StrictServerInterface {
 	return &Server{
@@ -40,6 +43,7 @@ func NewServer(
 		releasesService:   releasesService,
 		favoritesService:  favoritesService,
 		followingsService: followingsService,
+		mediaService:      mediaService,
 		logger:            logger,
 	}
 }
@@ -94,4 +98,8 @@ func (s *Server) FollowArtist(ctx context.Context, req openapi.FollowArtistReque
 
 func (s *Server) UnfollowArtist(ctx context.Context, req openapi.UnfollowArtistRequestObject) (openapi.UnfollowArtistResponseObject, error) {
 	return followings.HandleUnfollowArtist(ctx, s.followingsService, s.logger, req)
+}
+
+func (s *Server) GetMedia(ctx context.Context, request openapi.GetMediaRequestObject) (openapi.GetMediaResponseObject, error) {
+	return media.GetMedia(ctx, s.mediaService, request)
 }

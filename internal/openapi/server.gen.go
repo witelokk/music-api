@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -220,6 +221,9 @@ type ServerInterface interface {
 	// Follow an artist
 	// (POST /followings)
 	FollowArtist(w http.ResponseWriter, r *http.Request)
+	// Get media file
+	// (GET /media/{id})
+	GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -391,6 +395,37 @@ func (siw *ServerInterfaceWrapper) FollowArtist(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.FollowArtist(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMedia operation middleware
+func (siw *ServerInterfaceWrapper) GetMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMedia(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -651,6 +686,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/followings", wrapper.UnfollowArtist)
 	m.HandleFunc("GET "+options.BaseURL+"/followings", wrapper.GetFollowings)
 	m.HandleFunc("POST "+options.BaseURL+"/followings", wrapper.FollowArtist)
+	m.HandleFunc("GET "+options.BaseURL+"/media/{id}", wrapper.GetMedia)
 	m.HandleFunc("GET "+options.BaseURL+"/releases/{id}", wrapper.GetRelease)
 	m.HandleFunc("GET "+options.BaseURL+"/songs/{id}", wrapper.GetSong)
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
@@ -918,6 +954,51 @@ func (response FollowArtist500JSONResponse) VisitFollowArtistResponse(w http.Res
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetMediaRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type GetMediaResponseObject interface {
+	VisitGetMediaResponse(w http.ResponseWriter) error
+}
+
+type GetMedia200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetMedia200ApplicationoctetStreamResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMedia404JSONResponse Error
+
+func (response GetMedia404JSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetMedia500JSONResponse Error
+
+func (response GetMedia500JSONResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetReleaseRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -1167,6 +1248,9 @@ type StrictServerInterface interface {
 	// Follow an artist
 	// (POST /followings)
 	FollowArtist(ctx context.Context, request FollowArtistRequestObject) (FollowArtistResponseObject, error)
+	// Get media file
+	// (GET /media/{id})
+	GetMedia(ctx context.Context, request GetMediaRequestObject) (GetMediaResponseObject, error)
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(ctx context.Context, request GetReleaseRequestObject) (GetReleaseResponseObject, error)
@@ -1407,6 +1491,32 @@ func (sh *strictHandler) FollowArtist(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(FollowArtistResponseObject); ok {
 		if err := validResponse.VisitFollowArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMedia operation middleware
+func (sh *strictHandler) GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request GetMediaRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMedia(ctx, request.(GetMediaRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMedia")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMediaResponseObject); ok {
+		if err := validResponse.VisitGetMediaResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

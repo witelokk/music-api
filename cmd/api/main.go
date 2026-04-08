@@ -6,12 +6,15 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/redis/go-redis/v9"
 	"github.com/witelokk/music-api/internal"
 	"github.com/witelokk/music-api/internal/artists"
 	"github.com/witelokk/music-api/internal/auth"
 	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/followings"
+	"github.com/witelokk/music-api/internal/media"
 	"github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/songs"
 )
@@ -30,6 +33,26 @@ func main() {
 		Addr: config.RedisURL,
 	})
 	defer redis.Close()
+
+	minioClient, err := minio.New(config.Minio.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(config.Minio.AccessKey, config.Minio.SecretKey, ""),
+		Secure: config.Minio.UseSSL,
+	})
+	if err != nil {
+		logger.Error("Failed to create MinIO client", slog.String("error", err.Error()))
+	} else {
+		ctx := context.Background()
+		exists, err := minioClient.BucketExists(ctx, config.Minio.Bucket)
+		if err != nil {
+			logger.Error("Failed to check MinIO bucket", slog.String("error", err.Error()))
+		} else if !exists {
+			if err := minioClient.MakeBucket(ctx, config.Minio.Bucket, minio.MakeBucketOptions{}); err != nil {
+				logger.Error("Failed to create MinIO bucket", slog.String("error", err.Error()))
+			} else {
+				logger.Info("Created MinIO bucket", slog.String("bucket", config.Minio.Bucket))
+			}
+		}
+	}
 
 	userRespository := auth.NewPostgresUserRepository(db)
 	songsRepository := songs.NewPostgresSongsRepository(db)
@@ -66,7 +89,13 @@ func main() {
 	favoritesService := favorites.NewFavoritesService(favoritesRepository)
 	followingsService := followings.NewFollowingsService(followingsRepository)
 
-	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, favoritesService, followingsService, logger)
+	var mediaService *media.MediaService
+	if err == nil {
+		storage := media.NewMinioStorage(minioClient, config.Minio.Bucket)
+		mediaService = media.NewMediaService(storage)
+	}
+
+	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, favoritesService, followingsService, mediaService, logger)
 	httpHandler := internal.NewHTTPHandler(
 		serverImpl,
 		internal.HTTPHandlerConfig{

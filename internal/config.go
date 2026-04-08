@@ -37,6 +37,14 @@ type Config struct {
 		Region string `env:"MAILGUN_REGION" yaml:"mailgun.region" env-required:"true"`
 	} `yaml:"mailgun"`
 
+	Minio struct {
+		Endpoint  string `env:"MINIO_ENDPOINT" yaml:"minio.endpoint" env-required:"true"`
+		AccessKey string `env:"MINIO_ACCESS_KEY" yaml:"minio.access_key" env-required:"true"`
+		SecretKey string `env:"MINIO_SECRET_KEY" yaml:"minio.secret_key" env-required:"true"`
+		Bucket    string `env:"MINIO_BUCKET" yaml:"minio.bucket" env-required:"true"`
+		UseSSL    bool   `env:"MINIO_USE_SSL" yaml:"minio.use_ssl" env-default:"false"`
+	} `yaml:"minio"`
+
 	// GoogleAuth struct {
 	// 	Audience []string `env:"GOOGLE_AUTH_AUDIENCE" env-delim:"," yaml:"google-auth.audience"`
 	// } `yaml:"google-auth"`
