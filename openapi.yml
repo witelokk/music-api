@@ -22,6 +22,8 @@ tags:
     description: Endpoints for viewing, following, and unfollowing artists for the current user.
   - name: Media
     description: Endpoints for serving media files such as audio streams and images.
+  - name: Playlists
+    description: Endpoints for managing user playlists and their songs.
 
 paths:
   /favorites:
@@ -467,6 +469,279 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /playlists:
+    get:
+      tags: [Playlists]
+      summary: Get a list of playlists
+      operationId: getPlaylists
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of playlists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaylistsSummary'
+        '500':
+          description: Failed to fetch playlists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Playlists]
+      summary: Create a new playlist
+      operationId: createPlaylist
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlaylistRequest'
+      responses:
+        '201':
+          description: Playlist created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePlaylistResponse'
+        '400':
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to create playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /playlists/{id}:
+    get:
+      tags: [Playlists]
+      summary: Get playlist by ID
+      operationId: getPlaylist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Playlist details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '404':
+          description: Playlist not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to fetch playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Playlists]
+      summary: Update a playlist
+      operationId: updatePlaylist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlaylistRequest'
+      responses:
+        '204':
+          description: Playlist updated successfully.
+        '400':
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Playlist not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to update playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Playlists]
+      summary: Delete a playlist
+      operationId: deletePlaylist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Playlist deleted successfully.
+        '404':
+          description: Playlist not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to delete playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /playlists/{id}/songs:
+    get:
+      tags: [Playlists]
+      summary: Get playlist songs
+      operationId: getPlaylistSongs
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of songs in the playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SongList'
+        '404':
+          description: Playlist not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to fetch playlist songs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Playlists]
+      summary: Add song to playlist
+      operationId: addSongToPlaylist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddSongToPlaylistRequest'
+      responses:
+        '204':
+          description: Song added to playlist.
+        '400':
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Playlist or song not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to add song to playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Playlists]
+      summary: Remove song from playlist
+      operationId: removeSongFromPlaylist
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoveSongFromPlaylistRequest'
+      responses:
+        '204':
+          description: Song removed from playlist.
+        '400':
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Playlist or song not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to remove song from playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -733,6 +1008,101 @@ components:
       required:
         - count
         - releases
+
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cover_url:
+          type: string
+          nullable: true
+        songs_count:
+          type: integer
+        songs:
+          $ref: '#/components/schemas/SongList'
+      required:
+        - id
+        - name
+        - songs_count
+        - songs
+
+    PlaylistSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cover_url:
+          type: string
+          nullable: true
+        songs_count:
+          type: integer
+      required:
+        - id
+        - name
+        - songs_count
+
+    PlaylistsSummary:
+      type: object
+      properties:
+        count:
+          type: integer
+        playlists:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlaylistSummary'
+      required:
+        - count
+        - playlists
+
+    CreatePlaylistRequest:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    CreatePlaylistResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+      required:
+        - id
+
+    UpdatePlaylistRequest:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    AddSongToPlaylistRequest:
+      type: object
+      properties:
+        song_id:
+          type: string
+          format: uuid
+      required:
+        - song_id
+
+    RemoveSongFromPlaylistRequest:
+      type: object
+      properties:
+        song_id:
+          type: string
+          format: uuid
+      required:
+        - song_id
 
     Error:
       type: object

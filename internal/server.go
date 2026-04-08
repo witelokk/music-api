@@ -11,6 +11,7 @@ import (
 	"github.com/witelokk/music-api/internal/followings"
 	"github.com/witelokk/music-api/internal/media"
 	openapi "github.com/witelokk/music-api/internal/openapi"
+	"github.com/witelokk/music-api/internal/playlists"
 	"github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/songs"
 )
@@ -23,6 +24,7 @@ type Server struct {
 	favoritesService  *favorites.FavoritesService
 	followingsService *followings.FollowingsService
 	mediaService      *media.MediaService
+	playlistsService  *playlists.PlaylistsService
 	logger            *slog.Logger
 }
 
@@ -34,6 +36,7 @@ func NewServer(
 	favoritesService *favorites.FavoritesService,
 	followingsService *followings.FollowingsService,
 	mediaService *media.MediaService,
+	playlistsService *playlists.PlaylistsService,
 	logger *slog.Logger,
 ) openapi.StrictServerInterface {
 	return &Server{
@@ -44,6 +47,7 @@ func NewServer(
 		favoritesService:  favoritesService,
 		followingsService: followingsService,
 		mediaService:      mediaService,
+		playlistsService:  playlistsService,
 		logger:            logger,
 	}
 }
@@ -102,4 +106,36 @@ func (s *Server) UnfollowArtist(ctx context.Context, req openapi.UnfollowArtistR
 
 func (s *Server) GetMedia(ctx context.Context, request openapi.GetMediaRequestObject) (openapi.GetMediaResponseObject, error) {
 	return media.GetMedia(ctx, s.mediaService, request)
+}
+
+func (s *Server) GetPlaylists(ctx context.Context, req openapi.GetPlaylistsRequestObject) (openapi.GetPlaylistsResponseObject, error) {
+	return playlists.HandleGetPlaylists(ctx, s.playlistsService, s.logger, req)
+}
+
+func (s *Server) CreatePlaylist(ctx context.Context, req openapi.CreatePlaylistRequestObject) (openapi.CreatePlaylistResponseObject, error) {
+	return playlists.HandleCreatePlaylist(ctx, s.playlistsService, s.logger, req)
+}
+
+func (s *Server) GetPlaylist(ctx context.Context, req openapi.GetPlaylistRequestObject) (openapi.GetPlaylistResponseObject, error) {
+	return playlists.HandleGetPlaylist(ctx, s.playlistsService, s.logger, req)
+}
+
+func (s *Server) UpdatePlaylist(ctx context.Context, req openapi.UpdatePlaylistRequestObject) (openapi.UpdatePlaylistResponseObject, error) {
+	return playlists.HandleUpdatePlaylist(ctx, s.playlistsService, s.logger, req)
+}
+
+func (s *Server) DeletePlaylist(ctx context.Context, req openapi.DeletePlaylistRequestObject) (openapi.DeletePlaylistResponseObject, error) {
+	return playlists.HandleDeletePlaylist(ctx, s.playlistsService, s.logger, req)
+}
+
+func (s *Server) GetPlaylistSongs(ctx context.Context, req openapi.GetPlaylistSongsRequestObject) (openapi.GetPlaylistSongsResponseObject, error) {
+	return playlists.HandleGetPlaylistSongs(ctx, s.playlistsService, s.logger, req)
+}
+
+func (s *Server) AddSongToPlaylist(ctx context.Context, req openapi.AddSongToPlaylistRequestObject) (openapi.AddSongToPlaylistResponseObject, error) {
+	return playlists.HandleAddSongToPlaylist(ctx, s.playlistsService, s.logger, req)
+}
+
+func (s *Server) RemoveSongFromPlaylist(ctx context.Context, req openapi.RemoveSongFromPlaylistRequestObject) (openapi.RemoveSongFromPlaylistResponseObject, error) {
+	return playlists.HandleRemoveSongFromPlaylist(ctx, s.playlistsService, s.logger, req)
 }
