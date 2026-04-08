@@ -26,6 +26,8 @@ tags:
     description: Endpoints for managing user playlists and their songs.
   - name: Search
     description: Endpoints for searching songs, artists, releases and playlists.
+  - name: Home
+    description: Endpoints for home screen layout.
 
 paths:
   /favorites:
@@ -797,6 +799,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /home-screen-layout:
+    get:
+      tags: [Home]
+      summary: Get home screen layout
+      operationId: getHomeScreenLayout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Home screen layout data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeScreenLayout'
+        '500':
+          description: Failed to fetch home screen layout.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1232,3 +1255,33 @@ components:
         - limit
         - total
         - results
+
+    HomeScreenSection:
+      type: object
+      properties:
+        title:
+          type: string
+        title_ru:
+          type: string
+        releases:
+          $ref: '#/components/schemas/ReleaseList'
+      required:
+        - title
+        - title_ru
+        - releases
+
+    HomeScreenLayout:
+      type: object
+      properties:
+        playlists:
+          $ref: '#/components/schemas/PlaylistsSummary'
+        followedArtists:
+          $ref: '#/components/schemas/ArtistList'
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/HomeScreenSection'
+      required:
+        - playlists
+        - followedArtists
+        - sections

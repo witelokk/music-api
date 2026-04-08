@@ -186,6 +186,20 @@ type GetTokensRequest struct {
 // GetTokensRequestGrantType Grant type to use.
 type GetTokensRequestGrantType string
 
+// HomeScreenLayout defines model for HomeScreenLayout.
+type HomeScreenLayout struct {
+	FollowedArtists ArtistList          `json:"followedArtists"`
+	Playlists       PlaylistsSummary    `json:"playlists"`
+	Sections        []HomeScreenSection `json:"sections"`
+}
+
+// HomeScreenSection defines model for HomeScreenSection.
+type HomeScreenSection struct {
+	Releases ReleaseList `json:"releases"`
+	Title    string      `json:"title"`
+	TitleRu  string      `json:"title_ru"`
+}
+
 // Playlist defines model for Playlist.
 type Playlist struct {
 	CoverUrl   *string            `json:"cover_url,omitempty"`
@@ -372,6 +386,9 @@ type ServerInterface interface {
 	// Follow an artist
 	// (POST /followings)
 	FollowArtist(w http.ResponseWriter, r *http.Request)
+	// Get home screen layout
+	// (GET /home-screen-layout)
+	GetHomeScreenLayout(w http.ResponseWriter, r *http.Request)
 	// Get media file
 	// (GET /media/{id})
 	GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -573,6 +590,26 @@ func (siw *ServerInterfaceWrapper) FollowArtist(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.FollowArtist(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHomeScreenLayout operation middleware
+func (siw *ServerInterfaceWrapper) GetHomeScreenLayout(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHomeScreenLayout(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1154,6 +1191,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/followings", wrapper.UnfollowArtist)
 	m.HandleFunc("GET "+options.BaseURL+"/followings", wrapper.GetFollowings)
 	m.HandleFunc("POST "+options.BaseURL+"/followings", wrapper.FollowArtist)
+	m.HandleFunc("GET "+options.BaseURL+"/home-screen-layout", wrapper.GetHomeScreenLayout)
 	m.HandleFunc("GET "+options.BaseURL+"/media/{id}", wrapper.GetMedia)
 	m.HandleFunc("GET "+options.BaseURL+"/playlists", wrapper.GetPlaylists)
 	m.HandleFunc("POST "+options.BaseURL+"/playlists", wrapper.CreatePlaylist)
@@ -1425,6 +1463,31 @@ func (response FollowArtist404JSONResponse) VisitFollowArtistResponse(w http.Res
 type FollowArtist500JSONResponse Error
 
 func (response FollowArtist500JSONResponse) VisitFollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetHomeScreenLayoutRequestObject struct {
+}
+
+type GetHomeScreenLayoutResponseObject interface {
+	VisitGetHomeScreenLayoutResponse(w http.ResponseWriter) error
+}
+
+type GetHomeScreenLayout200JSONResponse HomeScreenLayout
+
+func (response GetHomeScreenLayout200JSONResponse) VisitGetHomeScreenLayoutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetHomeScreenLayout500JSONResponse Error
+
+func (response GetHomeScreenLayout500JSONResponse) VisitGetHomeScreenLayoutResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -2056,6 +2119,9 @@ type StrictServerInterface interface {
 	// Follow an artist
 	// (POST /followings)
 	FollowArtist(ctx context.Context, request FollowArtistRequestObject) (FollowArtistResponseObject, error)
+	// Get home screen layout
+	// (GET /home-screen-layout)
+	GetHomeScreenLayout(ctx context.Context, request GetHomeScreenLayoutRequestObject) (GetHomeScreenLayoutResponseObject, error)
 	// Get media file
 	// (GET /media/{id})
 	GetMedia(ctx context.Context, request GetMediaRequestObject) (GetMediaResponseObject, error)
@@ -2326,6 +2392,30 @@ func (sh *strictHandler) FollowArtist(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(FollowArtistResponseObject); ok {
 		if err := validResponse.VisitFollowArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHomeScreenLayout operation middleware
+func (sh *strictHandler) GetHomeScreenLayout(w http.ResponseWriter, r *http.Request) {
+	var request GetHomeScreenLayoutRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHomeScreenLayout(ctx, request.(GetHomeScreenLayoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHomeScreenLayout")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetHomeScreenLayoutResponseObject); ok {
+		if err := validResponse.VisitGetHomeScreenLayoutResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

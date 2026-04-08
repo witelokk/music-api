@@ -147,3 +147,13 @@ func (s *Server) AddSongToPlaylist(ctx context.Context, req openapi.AddSongToPla
 func (s *Server) RemoveSongFromPlaylist(ctx context.Context, req openapi.RemoveSongFromPlaylistRequestObject) (openapi.RemoveSongFromPlaylistResponseObject, error) {
 	return playlists.HandleRemoveSongFromPlaylist(ctx, s.playlistsService, s.logger, req)
 }
+
+func (s *Server) GetHomeScreenLayout(ctx context.Context, req openapi.GetHomeScreenLayoutRequestObject) (openapi.GetHomeScreenLayoutResponseObject, error) {
+	// TODO: implement home screen layout aggregation.
+	// For now, return an empty layout structure.
+	return openapi.GetHomeScreenLayout200JSONResponse{
+		Playlists:       openapi.PlaylistsSummary{Count: 0, Playlists: []openapi.PlaylistSummary{}},
+		FollowedArtists: openapi.ArtistList{Count: 0, Artists: []openapi.ArtistSummary{}, Names: ""},
+		Sections:        []openapi.HomeScreenSection{},
+	}, nil
+}
