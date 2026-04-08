@@ -2,7 +2,6 @@ package followings
 
 import (
 	"context"
-	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -14,9 +13,7 @@ type FollowingsRepository interface {
 }
 
 type PostgresFollowingsRepository struct {
-	pool     *pgxpool.Pool
-	initOnce sync.Once
-	initErr  error
+	pool *pgxpool.Pool
 }
 
 type FollowedArtist struct {
@@ -29,25 +26,7 @@ func NewPostgresFollowingsRepository(pool *pgxpool.Pool) *PostgresFollowingsRepo
 	return &PostgresFollowingsRepository{pool: pool}
 }
 
-func (r *PostgresFollowingsRepository) ensureTable(ctx context.Context) error {
-	r.initOnce.Do(func() {
-		_, err := r.pool.Exec(ctx, `
-			CREATE TABLE IF NOT EXISTS followings (
-				user_id UUID NOT NULL,
-				artist_id UUID NOT NULL,
-				PRIMARY KEY (user_id, artist_id)
-			)
-		`)
-		r.initErr = err
-	})
-	return r.initErr
-}
-
 func (r *PostgresFollowingsRepository) Follow(ctx context.Context, userID, artistID string) error {
-	if err := r.ensureTable(ctx); err != nil {
-		return err
-	}
-
 	const query = `
 		INSERT INTO followings (user_id, artist_id)
 		VALUES ($1, $2)
@@ -59,10 +38,6 @@ func (r *PostgresFollowingsRepository) Follow(ctx context.Context, userID, artis
 }
 
 func (r *PostgresFollowingsRepository) Unfollow(ctx context.Context, userID, artistID string) error {
-	if err := r.ensureTable(ctx); err != nil {
-		return err
-	}
-
 	const query = `
 		DELETE FROM followings
 		WHERE user_id = $1 AND artist_id = $2
@@ -73,10 +48,6 @@ func (r *PostgresFollowingsRepository) Unfollow(ctx context.Context, userID, art
 }
 
 func (r *PostgresFollowingsRepository) GetFollowedArtists(ctx context.Context, userID string) ([]FollowedArtist, error) {
-	if err := r.ensureTable(ctx); err != nil {
-		return nil, err
-	}
-
 	const query = `
 		SELECT a.id, a.name, a.avatar_url
 		FROM followings f

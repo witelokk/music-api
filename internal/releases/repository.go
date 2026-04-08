@@ -3,7 +3,6 @@ package releases
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,42 +14,14 @@ type ReleasesRepository interface {
 }
 
 type PostgresReleasesRepository struct {
-	pool     *pgxpool.Pool
-	initOnce sync.Once
-	initErr  error
+	pool *pgxpool.Pool
 }
 
 func NewPostgresReleasesRepository(pool *pgxpool.Pool) *PostgresReleasesRepository {
 	return &PostgresReleasesRepository{pool: pool}
 }
 
-func (r *PostgresReleasesRepository) ensureTable(ctx context.Context) error {
-	r.initOnce.Do(func() {
-		_, err := r.pool.Exec(ctx, `
-			CREATE TABLE IF NOT EXISTS releases (
-				id UUID PRIMARY KEY,
-				name TEXT NOT NULL,
-				cover_url TEXT,
-				type INT NOT NULL,
-				release_at TIMESTAMP NOT NULL
-			);
-
-			CREATE TABLE IF NOT EXISTS release_songs (
-				release_id UUID NOT NULL,
-				song_id UUID NOT NULL,
-				PRIMARY KEY (release_id, song_id)
-			)
-		`)
-		r.initErr = err
-	})
-	return r.initErr
-}
-
 func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id string) (*Release, error) {
-	if err := r.ensureTable(ctx); err != nil {
-		return nil, err
-	}
-
 	const releaseQuery = `
 		SELECT id, name, cover_url, type, release_at
 		FROM releases
@@ -105,11 +76,11 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	var songs []ReleaseSong
 	for songRows.Next() {
 		var (
-			songID     string
-			songName   string
-			songCover  *string
-			duration   int
-			streamURL  string
+			songID    string
+			songName  string
+			songCover *string
+			duration  int
+			streamURL string
 		)
 		if err := songRows.Scan(&songID, &songName, &songCover, &duration, &streamURL); err != nil {
 			return nil, err

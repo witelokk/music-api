@@ -39,6 +39,8 @@ func NewHTTPHandler(
 		"/docs/",
 	))
 
+	mux.Handle("/", http.RedirectHandler("/docs/", http.StatusFound))
+
 	strictHandler := openapi.NewStrictHandlerWithOptions(
 		serverImpl,
 		[]openapi.StrictMiddlewareFunc{

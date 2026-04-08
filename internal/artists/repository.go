@@ -3,7 +3,6 @@ package artists
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,47 +14,14 @@ type ArtistsRepository interface {
 }
 
 type PostgresArtistsRepository struct {
-	pool     *pgxpool.Pool
-	initOnce sync.Once
-	initErr  error
+	pool *pgxpool.Pool
 }
 
 func NewPostgresArtistsRepository(pool *pgxpool.Pool) *PostgresArtistsRepository {
 	return &PostgresArtistsRepository{pool: pool}
 }
 
-func (r *PostgresArtistsRepository) ensureTable(ctx context.Context) error {
-	r.initOnce.Do(func() {
-		_, err := r.pool.Exec(ctx, `
-			CREATE TABLE IF NOT EXISTS artists (
-				id UUID PRIMARY KEY,
-				name TEXT NOT NULL,
-				avatar_url TEXT,
-				cover_url TEXT
-			);
-
-			CREATE TABLE IF NOT EXISTS song_artists (
-				song_id UUID NOT NULL,
-				artist_id UUID NOT NULL,
-				PRIMARY KEY (song_id, artist_id)
-			);
-
-			CREATE TABLE IF NOT EXISTS release_songs (
-				release_id UUID NOT NULL,
-				song_id UUID NOT NULL,
-				PRIMARY KEY (release_id, song_id)
-			)
-		`)
-		r.initErr = err
-	})
-	return r.initErr
-}
-
 func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, userID string) (*Artist, int, bool, error) {
-	if err := r.ensureTable(ctx); err != nil {
-		return nil, 0, false, err
-	}
-
 	const artistQuery = `
 		SELECT a.id,
 		       a.name,
@@ -121,11 +87,11 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	var popular []PopularSong
 	for popRows.Next() {
 		var (
-			songID     string
-			songName   string
-			cover      *string
-			duration   int
-			streamURL  string
+			songID    string
+			songName  string
+			cover     *string
+			duration  int
+			streamURL string
 		)
 		if err := popRows.Scan(&songID, &songName, &cover, &duration, &streamURL); err != nil {
 			return nil, 0, false, err

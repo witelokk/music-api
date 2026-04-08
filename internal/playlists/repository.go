@@ -2,7 +2,6 @@ package playlists
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -21,42 +20,14 @@ type PlaylistsRepository interface {
 }
 
 type PostgresPlaylistsRepository struct {
-	pool     *pgxpool.Pool
-	initOnce sync.Once
-	initErr  error
+	pool *pgxpool.Pool
 }
 
 func NewPostgresPlaylistsRepository(pool *pgxpool.Pool) *PostgresPlaylistsRepository {
 	return &PostgresPlaylistsRepository{pool: pool}
 }
 
-func (r *PostgresPlaylistsRepository) ensureTables(ctx context.Context) error {
-	r.initOnce.Do(func() {
-		_, err := r.pool.Exec(ctx, `
-			CREATE TABLE IF NOT EXISTS playlists (
-				id UUID PRIMARY KEY,
-				user_id UUID NOT NULL,
-				name VARCHAR(255) NOT NULL,
-				created_at TIMESTAMP NOT NULL DEFAULT NOW()
-			);
-
-			CREATE TABLE IF NOT EXISTS playlist_songs (
-				playlist_id UUID NOT NULL,
-				song_id UUID NOT NULL,
-				added_at TIMESTAMP NOT NULL DEFAULT NOW(),
-				PRIMARY KEY (playlist_id, song_id)
-			)
-		`)
-		r.initErr = err
-	})
-	return r.initErr
-}
-
 func (r *PostgresPlaylistsRepository) CreatePlaylist(ctx context.Context, userID, name string) (string, error) {
-	if err := r.ensureTables(ctx); err != nil {
-		return "", err
-	}
-
 	const query = `
 		INSERT INTO playlists (id, user_id, name, created_at)
 		VALUES (gen_random_uuid(), $1, $2, NOW())
@@ -71,10 +42,6 @@ func (r *PostgresPlaylistsRepository) CreatePlaylist(ctx context.Context, userID
 }
 
 func (r *PostgresPlaylistsRepository) UpdatePlaylist(ctx context.Context, userID, playlistID, name string) error {
-	if err := r.ensureTables(ctx); err != nil {
-		return err
-	}
-
 	const query = `
 		UPDATE playlists
 		SET name = $3
@@ -92,10 +59,6 @@ func (r *PostgresPlaylistsRepository) UpdatePlaylist(ctx context.Context, userID
 }
 
 func (r *PostgresPlaylistsRepository) DeletePlaylist(ctx context.Context, userID, playlistID string) error {
-	if err := r.ensureTables(ctx); err != nil {
-		return err
-	}
-
 	const query = `
 		DELETE FROM playlists
 		WHERE id = $1 AND user_id = $2
@@ -112,10 +75,6 @@ func (r *PostgresPlaylistsRepository) DeletePlaylist(ctx context.Context, userID
 }
 
 func (r *PostgresPlaylistsRepository) GetPlaylists(ctx context.Context, userID string) ([]PlaylistSummary, error) {
-	if err := r.ensureTables(ctx); err != nil {
-		return nil, err
-	}
-
 	const query = `
 		SELECT p.id,
 		       p.name,
@@ -160,10 +119,6 @@ func (r *PostgresPlaylistsRepository) GetPlaylists(ctx context.Context, userID s
 }
 
 func (r *PostgresPlaylistsRepository) GetPlaylist(ctx context.Context, userID, playlistID string) (*Playlist, error) {
-	if err := r.ensureTables(ctx); err != nil {
-		return nil, err
-	}
-
 	const query = `
 		SELECT p.id,
 		       p.user_id,
@@ -206,10 +161,6 @@ func (r *PostgresPlaylistsRepository) GetPlaylist(ctx context.Context, userID, p
 }
 
 func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, userID, playlistID string) ([]PlaylistSong, error) {
-	if err := r.ensureTables(ctx); err != nil {
-		return nil, err
-	}
-
 	const query = `
 		SELECT s.id,
 		       s.name,
@@ -247,14 +198,14 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 
 	for rows.Next() {
 		var (
-			id          string
-			name        string
-			coverURL    *string
-			duration    int
-			streamURL   string
-			isFavorite  bool
-			artistID    *string
-			artistName  *string
+			id           string
+			name         string
+			coverURL     *string
+			duration     int
+			streamURL    string
+			isFavorite   bool
+			artistID     *string
+			artistName   *string
 			artistAvatar *string
 		)
 		if err := rows.Scan(&id, &name, &coverURL, &duration, &streamURL, &isFavorite, &artistID, &artistName, &artistAvatar); err != nil {
@@ -294,10 +245,6 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 }
 
 func (r *PostgresPlaylistsRepository) AddSongToPlaylist(ctx context.Context, userID, playlistID, songID string) error {
-	if err := r.ensureTables(ctx); err != nil {
-		return err
-	}
-
 	const query = `
 		INSERT INTO playlist_songs (playlist_id, song_id, added_at)
 		SELECT p.id, $3, NOW()
@@ -317,10 +264,6 @@ func (r *PostgresPlaylistsRepository) AddSongToPlaylist(ctx context.Context, use
 }
 
 func (r *PostgresPlaylistsRepository) RemoveSongFromPlaylist(ctx context.Context, userID, playlistID, songID string) error {
-	if err := r.ensureTables(ctx); err != nil {
-		return err
-	}
-
 	const query = `
 		DELETE FROM playlist_songs ps
 		USING playlists p
