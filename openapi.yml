@@ -24,6 +24,8 @@ tags:
     description: Endpoints for serving media files such as audio streams and images.
   - name: Playlists
     description: Endpoints for managing user playlists and their songs.
+  - name: Search
+    description: Endpoints for searching songs, artists, releases and playlists.
 
 paths:
   /favorites:
@@ -742,6 +744,59 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /search:
+    get:
+      tags: [Search]
+      summary: Search songs, artists, releases and playlists
+      operationId: search
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [song, release, artist, playlist]
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+      responses:
+        '200':
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Invalid search parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to perform search.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1112,3 +1167,68 @@ components:
           description: Human-readable error message.
       required:
         - error
+
+    ReleaseSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        cover_url:
+          type: string
+          nullable: true
+        type:
+          type: string
+        released_at:
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - released_at
+
+    SearchResultItem:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type of the search result.
+          enum: [song, release, artist, playlist]
+        song:
+          $ref: '#/components/schemas/Song'
+          nullable: true
+        release:
+          $ref: '#/components/schemas/ReleaseSummary'
+          nullable: true
+        artist:
+          $ref: '#/components/schemas/ArtistSummary'
+          nullable: true
+        playlist:
+          $ref: '#/components/schemas/PlaylistSummary'
+          nullable: true
+      required:
+        - type
+
+    SearchResponse:
+      type: object
+      properties:
+        query:
+          type: string
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResultItem'
+      required:
+        - query
+        - page
+        - limit
+        - total
+        - results

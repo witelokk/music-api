@@ -40,6 +40,54 @@ func (e GetTokensRequestGrantType) Valid() bool {
 	}
 }
 
+// Defines values for SearchResultItemType.
+const (
+	SearchResultItemTypeArtist   SearchResultItemType = "artist"
+	SearchResultItemTypePlaylist SearchResultItemType = "playlist"
+	SearchResultItemTypeRelease  SearchResultItemType = "release"
+	SearchResultItemTypeSong     SearchResultItemType = "song"
+)
+
+// Valid indicates whether the value is a known member of the SearchResultItemType enum.
+func (e SearchResultItemType) Valid() bool {
+	switch e {
+	case SearchResultItemTypeArtist:
+		return true
+	case SearchResultItemTypePlaylist:
+		return true
+	case SearchResultItemTypeRelease:
+		return true
+	case SearchResultItemTypeSong:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SearchParamsType.
+const (
+	SearchParamsTypeArtist   SearchParamsType = "artist"
+	SearchParamsTypePlaylist SearchParamsType = "playlist"
+	SearchParamsTypeRelease  SearchParamsType = "release"
+	SearchParamsTypeSong     SearchParamsType = "song"
+)
+
+// Valid indicates whether the value is a known member of the SearchParamsType enum.
+func (e SearchParamsType) Valid() bool {
+	switch e {
+	case SearchParamsTypeArtist:
+		return true
+	case SearchParamsTypePlaylist:
+		return true
+	case SearchParamsTypeRelease:
+		return true
+	case SearchParamsTypeSong:
+		return true
+	default:
+		return false
+	}
+}
+
 // AddSongToPlaylistRequest defines model for AddSongToPlaylistRequest.
 type AddSongToPlaylistRequest struct {
 	SongId openapi_types.UUID `json:"song_id"`
@@ -178,10 +226,42 @@ type ReleaseList struct {
 	Releases []Release `json:"releases"`
 }
 
+// ReleaseSummary defines model for ReleaseSummary.
+type ReleaseSummary struct {
+	CoverUrl   *string            `json:"cover_url,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	Name       string             `json:"name"`
+	ReleasedAt string             `json:"released_at"`
+	Type       string             `json:"type"`
+}
+
 // RemoveSongFromPlaylistRequest defines model for RemoveSongFromPlaylistRequest.
 type RemoveSongFromPlaylistRequest struct {
 	SongId openapi_types.UUID `json:"song_id"`
 }
+
+// SearchResponse defines model for SearchResponse.
+type SearchResponse struct {
+	Limit   int                `json:"limit"`
+	Page    int                `json:"page"`
+	Query   string             `json:"query"`
+	Results []SearchResultItem `json:"results"`
+	Total   int                `json:"total"`
+}
+
+// SearchResultItem defines model for SearchResultItem.
+type SearchResultItem struct {
+	Artist   *ArtistSummary   `json:"artist,omitempty"`
+	Playlist *PlaylistSummary `json:"playlist,omitempty"`
+	Release  *ReleaseSummary  `json:"release,omitempty"`
+	Song     *Song            `json:"song,omitempty"`
+
+	// Type Type of the search result.
+	Type SearchResultItemType `json:"type"`
+}
+
+// SearchResultItemType Type of the search result.
+type SearchResultItemType string
 
 // SendVerificationEmailRequest defines model for SendVerificationEmailRequest.
 type SendVerificationEmailRequest struct {
@@ -224,6 +304,17 @@ type User struct {
 	Id        openapi_types.UUID  `json:"id"`
 	Name      string              `json:"name"`
 }
+
+// SearchParams defines parameters for Search.
+type SearchParams struct {
+	Q     string            `form:"q" json:"q"`
+	Type  *SearchParamsType `form:"type,omitempty" json:"type,omitempty"`
+	Page  *int              `form:"page,omitempty" json:"page,omitempty"`
+	Limit *int              `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// SearchParamsType defines parameters for Search.
+type SearchParamsType string
 
 // RemoveFavoriteJSONRequestBody defines body for RemoveFavorite for application/json ContentType.
 type RemoveFavoriteJSONRequestBody = FavoriteSongRequest
@@ -311,6 +402,9 @@ type ServerInterface interface {
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Search songs, artists, releases and playlists
+	// (GET /search)
+	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
 	// Get song by ID
 	// (GET /songs/{id})
 	GetSong(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -776,6 +870,70 @@ func (siw *ServerInterfaceWrapper) GetRelease(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// Search operation middleware
+func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchParams
+
+	// ------------- Required query parameter "q" -------------
+
+	if paramValue := r.URL.Query().Get("q"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		return
+	}
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "type", r.URL.Query(), &params.Type, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "type", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", r.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Search(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSong operation middleware
 func (siw *ServerInterfaceWrapper) GetSong(w http.ResponseWriter, r *http.Request) {
 
@@ -1006,6 +1164,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/playlists/{id}/songs", wrapper.GetPlaylistSongs)
 	m.HandleFunc("POST "+options.BaseURL+"/playlists/{id}/songs", wrapper.AddSongToPlaylist)
 	m.HandleFunc("GET "+options.BaseURL+"/releases/{id}", wrapper.GetRelease)
+	m.HandleFunc("GET "+options.BaseURL+"/search", wrapper.Search)
 	m.HandleFunc("GET "+options.BaseURL+"/songs/{id}", wrapper.GetSong)
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
 	m.HandleFunc("POST "+options.BaseURL+"/users", wrapper.CreateUser)
@@ -1648,6 +1807,41 @@ func (response GetRelease500JSONResponse) VisitGetReleaseResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SearchRequestObject struct {
+	Params SearchParams
+}
+
+type SearchResponseObject interface {
+	VisitSearchResponse(w http.ResponseWriter) error
+}
+
+type Search200JSONResponse SearchResponse
+
+func (response Search200JSONResponse) VisitSearchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Search400JSONResponse Error
+
+func (response Search400JSONResponse) VisitSearchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Search500JSONResponse Error
+
+func (response Search500JSONResponse) VisitSearchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetSongRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -1892,6 +2086,9 @@ type StrictServerInterface interface {
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(ctx context.Context, request GetReleaseRequestObject) (GetReleaseResponseObject, error)
+	// Search songs, artists, releases and playlists
+	// (GET /search)
+	Search(ctx context.Context, request SearchRequestObject) (SearchResponseObject, error)
 	// Get song by ID
 	// (GET /songs/{id})
 	GetSong(ctx context.Context, request GetSongRequestObject) (GetSongResponseObject, error)
@@ -2413,6 +2610,32 @@ func (sh *strictHandler) GetRelease(w http.ResponseWriter, r *http.Request, id o
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetReleaseResponseObject); ok {
 		if err := validResponse.VisitGetReleaseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Search operation middleware
+func (sh *strictHandler) Search(w http.ResponseWriter, r *http.Request, params SearchParams) {
+	var request SearchRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Search(ctx, request.(SearchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Search")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchResponseObject); ok {
+		if err := validResponse.VisitSearchResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

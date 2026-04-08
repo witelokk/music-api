@@ -17,6 +17,7 @@ import (
 	"github.com/witelokk/music-api/internal/media"
 	"github.com/witelokk/music-api/internal/playlists"
 	"github.com/witelokk/music-api/internal/releases"
+	"github.com/witelokk/music-api/internal/search"
 	"github.com/witelokk/music-api/internal/songs"
 )
 
@@ -62,6 +63,7 @@ func main() {
 	favoritesRepository := favorites.NewPostgresFavoritesRepository(db)
 	followingsRepository := followings.NewPostgresFollowingsRepository(db)
 	playlistsRepository := playlists.NewPostgresPlaylistsRepository(db)
+	searchRepository := search.NewPostgresSearchRepository(db)
 	verificationCodeRepository := auth.NewRedisVerificationCodeRepository(redis)
 	refreshTokenRespository := auth.NewRedisRefreshTokenRepository(redis)
 	emailSender := auth.NewMailgunEmailSender(
@@ -91,6 +93,7 @@ func main() {
 	favoritesService := favorites.NewFavoritesService(favoritesRepository)
 	followingsService := followings.NewFollowingsService(followingsRepository)
 	playlistsService := playlists.NewPlaylistsService(playlistsRepository)
+	searchService := search.NewService(searchRepository)
 
 	var mediaService *media.MediaService
 	if err == nil {
@@ -98,7 +101,7 @@ func main() {
 		mediaService = media.NewMediaService(storage)
 	}
 
-	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, favoritesService, followingsService, mediaService, playlistsService, logger)
+	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, favoritesService, followingsService, mediaService, playlistsService, searchService, logger)
 	httpHandler := internal.NewHTTPHandler(
 		serverImpl,
 		internal.HTTPHandlerConfig{

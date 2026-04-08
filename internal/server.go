@@ -12,6 +12,7 @@ import (
 	"github.com/witelokk/music-api/internal/media"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/playlists"
+	"github.com/witelokk/music-api/internal/search"
 	"github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/songs"
 )
@@ -25,6 +26,7 @@ type Server struct {
 	followingsService *followings.FollowingsService
 	mediaService      *media.MediaService
 	playlistsService  *playlists.PlaylistsService
+	searchService     *search.Service
 	logger            *slog.Logger
 }
 
@@ -37,6 +39,7 @@ func NewServer(
 	followingsService *followings.FollowingsService,
 	mediaService *media.MediaService,
 	playlistsService *playlists.PlaylistsService,
+	searchService *search.Service,
 	logger *slog.Logger,
 ) openapi.StrictServerInterface {
 	return &Server{
@@ -48,6 +51,7 @@ func NewServer(
 		followingsService: followingsService,
 		mediaService:      mediaService,
 		playlistsService:  playlistsService,
+		searchService:     searchService,
 		logger:            logger,
 	}
 }
@@ -106,6 +110,10 @@ func (s *Server) UnfollowArtist(ctx context.Context, req openapi.UnfollowArtistR
 
 func (s *Server) GetMedia(ctx context.Context, request openapi.GetMediaRequestObject) (openapi.GetMediaResponseObject, error) {
 	return media.GetMedia(ctx, s.mediaService, request)
+}
+
+func (s *Server) Search(ctx context.Context, req openapi.SearchRequestObject) (openapi.SearchResponseObject, error) {
+	return search.HandleSearch(ctx, s.searchService, s.logger, req)
 }
 
 func (s *Server) GetPlaylists(ctx context.Context, req openapi.GetPlaylistsRequestObject) (openapi.GetPlaylistsResponseObject, error) {
