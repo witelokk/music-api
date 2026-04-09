@@ -435,7 +435,7 @@ type ServerInterface interface {
 	// (GET /users/me)
 	GetCurrentUser(w http.ResponseWriter, r *http.Request)
 	// Send verification email
-	// (POST /verification-email)
+	// (POST /verification-code-request)
 	SendVerificationEmail(w http.ResponseWriter, r *http.Request)
 }
 
@@ -1207,7 +1207,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
 	m.HandleFunc("POST "+options.BaseURL+"/users", wrapper.CreateUser)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetCurrentUser)
-	m.HandleFunc("POST "+options.BaseURL+"/verification-email", wrapper.SendVerificationEmail)
+	m.HandleFunc("POST "+options.BaseURL+"/verification-code-request", wrapper.SendVerificationEmail)
 
 	return m
 }
@@ -1502,13 +1502,70 @@ type GetMediaResponseObject interface {
 	VisitGetMediaResponse(w http.ResponseWriter) error
 }
 
-type GetMedia200ApplicationoctetStreamResponse struct {
+type GetMedia200ApplicationvndAppleMpegurlResponse struct {
 	Body          io.Reader
 	ContentLength int64
 }
 
-func (response GetMedia200ApplicationoctetStreamResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/octet-stream")
+func (response GetMedia200ApplicationvndAppleMpegurlResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMedia200ImagejpegResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetMedia200ImagejpegResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "image/jpeg")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMedia200OctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetMedia200OctetStreamResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "octet-stream")
+	if response.ContentLength != 0 {
+		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	w.WriteHeader(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(w, response.Body)
+	return err
+}
+
+type GetMedia200Videomp2tResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response GetMedia200Videomp2tResponse) VisitGetMediaResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "video/mp2t")
 	if response.ContentLength != 0 {
 		w.Header().Set("Content-Length", fmt.Sprint(response.ContentLength))
 	}
@@ -2168,7 +2225,7 @@ type StrictServerInterface interface {
 	// (GET /users/me)
 	GetCurrentUser(ctx context.Context, request GetCurrentUserRequestObject) (GetCurrentUserResponseObject, error)
 	// Send verification email
-	// (POST /verification-email)
+	// (POST /verification-code-request)
 	SendVerificationEmail(ctx context.Context, request SendVerificationEmailRequestObject) (SendVerificationEmailResponseObject, error)
 }
 

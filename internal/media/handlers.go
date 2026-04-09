@@ -22,7 +22,7 @@ func GetMedia(
 
 	objectName := request.Id.String()
 
-	reader, size, err := mediaService.GetObjectStream(ctx, objectName)
+	reader, size, mediaType, err := mediaService.GetObjectStream(ctx, objectName)
 	if err != nil {
 		if errors.Is(err, ErrMediaNotFound) {
 			return openapi.GetMedia404JSONResponse(openapi.Error{Error: "media not found"}), nil
@@ -35,8 +35,26 @@ func GetMedia(
 		return openapi.GetMedia500JSONResponse(openapi.Error{Error: "failed to fetch media"}), nil
 	}
 
-	return openapi.GetMedia200ApplicationoctetStreamResponse{
-		Body:          reader,
-		ContentLength: size,
-	}, nil
+	switch mediaType {
+	case "application/vnd.apple.mpegurl":
+		return openapi.GetMedia200ApplicationvndAppleMpegurlResponse{
+			Body:          reader,
+			ContentLength: size,
+		}, nil
+	case "video/mp2t":
+		return openapi.GetMedia200Videomp2tResponse{
+			Body:          reader,
+			ContentLength: size,
+		}, nil
+	case "image/jpeg":
+		return openapi.GetMedia200ImagejpegResponse{
+			Body:          reader,
+			ContentLength: size,
+		}, nil
+	default:
+		return openapi.GetMedia200OctetStreamResponse{
+			Body:          reader,
+			ContentLength: size,
+		}, nil
+	}
 }

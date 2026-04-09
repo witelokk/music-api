@@ -20,21 +20,20 @@ func NewMinioStorage(client *minio.Client, bucket string) Storage {
 	}
 }
 
-func (s *MinioStorage) GetObjectStream(ctx context.Context, objectName string) (io.ReadCloser, int64, error) {
+func (s *MinioStorage) GetObjectStream(ctx context.Context, objectName string) (file io.ReadCloser, size int64, mime string, err error) {
 	obj, err := s.client.GetObject(ctx, s.bucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 
 	info, err := obj.Stat()
 	if err != nil {
 		var minioErr minio.ErrorResponse
 		if errors.As(err, &minioErr) && minioErr.Code == "NoSuchKey" {
-			return nil, 0, ErrMediaNotFound
+			return nil, 0, "", ErrMediaNotFound
 		}
-		return nil, 0, err
+		return nil, 0, "", err
 	}
 
-	return obj, info.Size, nil
+	return obj, info.Size, info.ContentType, nil
 }
-

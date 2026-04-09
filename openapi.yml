@@ -208,7 +208,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /verification-email:
+  /verification-code-request:
     post:
       tags: [Auth]
       summary: Send verification email
@@ -388,7 +388,19 @@ paths:
         '200':
           description: Media file bytes.
           content:
-            application/octet-stream:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+                format: binary
+            video/mp2t:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            octet-stream:
               schema:
                 type: string
                 format: binary

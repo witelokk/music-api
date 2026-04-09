@@ -9,7 +9,7 @@ import (
 var ErrMediaNotFound = errors.New("media not found")
 
 type Storage interface {
-	GetObjectStream(ctx context.Context, objectName string) (io.ReadCloser, int64, error)
+	GetObjectStream(ctx context.Context, objectName string) (file io.ReadCloser, size int64, mime string, err error)
 }
 
 type MediaService struct {
@@ -22,6 +22,6 @@ func NewMediaService(storage Storage) *MediaService {
 	}
 }
 
-func (s *MediaService) GetObjectStream(ctx context.Context, objectName string) (io.ReadCloser, int64, error) {
+func (s *MediaService) GetObjectStream(ctx context.Context, objectName string) (io.ReadCloser, int64, string, error) {
 	return s.storage.GetObjectStream(ctx, objectName)
 }
