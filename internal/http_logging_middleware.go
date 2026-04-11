@@ -51,6 +51,11 @@ func NewHTTPLoggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handl
 			reqLogger := logger.With(slog.String("request_id", requestID))
 			ctx = requestctx.WithLogger(ctx, reqLogger)
 
+			reqLogger.Info("request received",
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+			)
+
 			isDebug := reqLogger.Enabled(ctx, slog.LevelDebug)
 
 			var requestBody []byte
@@ -74,14 +79,6 @@ func NewHTTPLoggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handl
 			if status == 0 {
 				status = http.StatusOK
 			}
-
-			reqLogger.Info("request completed",
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.Int("status", status),
-				slog.Int("bytes", recorder.bytes),
-				slog.Duration("duration", time.Since(start)),
-			)
 
 			if isDebug {
 				const maxBodyLogBytes = 2048
@@ -128,6 +125,14 @@ func NewHTTPLoggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handl
 					slog.String("body", respBodyStr),
 				)
 			}
+
+			reqLogger.Info("request completed",
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.Int("status", status),
+				slog.Int("bytes", recorder.bytes),
+				slog.Duration("duration", time.Since(start)),
+			)
 		})
 	}
 }

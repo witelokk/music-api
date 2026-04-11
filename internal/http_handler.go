@@ -39,7 +39,14 @@ func NewHTTPHandler(
 		"/docs/",
 	))
 
-	mux.Handle("/", http.RedirectHandler("/docs/", http.StatusFound))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			http.Redirect(w, r, "/docs/", http.StatusFound)
+			return
+		}
+
+		http.NotFound(w, r)
+	})
 
 	strictHandler := openapi.NewStrictHandlerWithOptions(
 		serverImpl,
