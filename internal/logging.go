@@ -3,10 +3,11 @@ package internal
 import (
 	"log/slog"
 	"os"
+	"strings"
 )
 
 func parseLogLevel(level string) slog.Level {
-	switch level {
+	switch strings.ToLower(level) {
 	case "debug":
 		return slog.LevelDebug
 	case "info":
