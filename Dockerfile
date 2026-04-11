@@ -1,13 +1,13 @@
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
 
+# Install golang-migrate CLI with Postgres driver enabled
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.0
+
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-
-# Install golang-migrate CLI with Postgres driver enabled
-RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.0
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o music-api ./cmd/api
 
