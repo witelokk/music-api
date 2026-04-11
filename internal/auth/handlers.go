@@ -188,6 +188,7 @@ func HandleGenerateTokens(
 			case errors.Is(err, ErrInvalidGoogleIDToken):
 				reqLogger.Error("invalid Google ID token",
 					slog.String("error", err.Error()),
+					slog.String("token", *body.GoogleToken),
 				)
 				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid google token"}), nil
 			default:

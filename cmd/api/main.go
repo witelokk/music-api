@@ -12,6 +12,7 @@ import (
 	"github.com/witelokk/music-api/internal"
 	"github.com/witelokk/music-api/internal/artists"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/auth/google_id_token"
 	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/followings"
 	"github.com/witelokk/music-api/internal/media"
@@ -72,6 +73,7 @@ func main() {
 		config.Mailgun.From,
 		auth.MailGunRegion(config.Mailgun.Region),
 	)
+	googleIDTokenValidator := google_id_token.NewValidator(config.Auth.GoogleIdTokenAudiences)
 
 	authService := auth.NewAuthService(
 		userRespository,
@@ -84,7 +86,7 @@ func main() {
 			RefreshTokenTTL:             config.Auth.RefreshTokenTTL,
 			VerificationCodeTTL:         config.Auth.VerificationCodeTTL,
 			NewVerificationCodeInterval: config.Auth.NewVerificationCodeInterval,
-			GoogleIdTokenAudiences:       config.Auth.GoogleIdTokenAudiences,
+			GoogleIdTokenVerifier:       googleIDTokenValidator,
 		},
 	)
 

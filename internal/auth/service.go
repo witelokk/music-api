@@ -6,11 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"google.golang.org/api/idtoken"
+	"github.com/witelokk/music-api/internal/auth/google_id_token"
 )
 
 var ErrVerificationCodeRecentlySent = errors.New("verification code recently sent")
@@ -28,7 +27,7 @@ type AuthServiceParams struct {
 	RefreshTokenTTL             time.Duration
 	VerificationCodeTTL         time.Duration
 	NewVerificationCodeInterval time.Duration
-	GoogleIdTokenAudiences      []string
+	GoogleIdTokenVerifier       *google_id_token.Validator
 }
 
 type AuthService struct {
@@ -131,23 +130,19 @@ func (s *AuthService) GetTokensWithRefreshToken(ctx context.Context, refreshToke
 }
 
 func (s *AuthService) GetTokensWithGoogleIDToken(ctx context.Context, idToken string) (*Tokens, error) {
-	payload, err := idtoken.Validate(ctx, idToken, "")
+	payload, err := s.params.GoogleIdTokenVerifier.Validate(ctx, idToken)
 	if err != nil {
-		return nil, fmt.Errorf("failed to validate Google ID token: %w", errors.Join(ErrInvalidGoogleIDToken, err))
+		return nil, errors.Join(ErrInvalidGoogleIDToken, err)
 	}
 
-	if !slices.Contains(s.params.GoogleIdTokenAudiences, payload.Audience) {
-		return nil, fmt.Errorf("%w: invalid audience: %s", ErrInvalidGoogleIDToken, payload.Audience)
-	}
-
-	user, err := s.userRepository.GetUserByEmail(ctx, payload.Claims["email"].(string))
+	user, err := s.userRepository.GetUserByEmail(ctx, payload["email"].(string))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 	if user == nil {
 		user = &User{
-			Name:  payload.Claims["name"].(string),
-			Email: payload.Claims["email"].(string),
+			Name:  payload["name"].(string),
+			Email: payload["email"].(string),
 		}
 
 		if err := s.createUserWithVerifiedEmail(ctx, user); err != nil {
