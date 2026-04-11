@@ -26,6 +26,7 @@ type Config struct {
 		VerificationCodeTTL         time.Duration `yaml:"verification_code_ttl" env:"VERIFICATION_CODE_TTL" env-default:"15m"`
 		NewVerificationCodeInterval time.Duration `yaml:"new_verification_code_interval" env:"NEW_VERIFICATION_CODE_INTERVAL" env-default:"2m"`
 		GoogleIdTokenAudiences      []string      `yaml:"google_id_token_audiences" env-delim:"," env:"GOOGLE_ID_TOKEN_AUDIENCES" env-required:"true"`
+		AppleIdTokenAudiences       []string      `yaml:"apple_id_token_audiences" env-delim:"," env:"APPLE_ID_TOKEN_AUDIENCES"`
 	} `yaml:"auth"`
 
 	DatabaseURL string `env:"DATABASE_URL" yaml:"database.url" env-required:"true"`

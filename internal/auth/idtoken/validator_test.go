@@ -1,4 +1,4 @@
-package google_id_token
+package idtoken
 
 import (
 	"bytes"

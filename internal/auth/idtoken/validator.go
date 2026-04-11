@@ -1,4 +1,4 @@
-package google_id_token
+package idtoken
 
 import (
 	"context"
@@ -16,7 +16,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const GOOGLE_CERTS_URL = "https://www.googleapis.com/oauth2/v3/certs"
+const (
+	googleCertsURL = "https://www.googleapis.com/oauth2/v3/certs"
+	appleCertsURL  = "https://appleid.apple.com/auth/keys"
+)
 
 type key struct {
 	KeyType   string `json:"kty"`
@@ -33,23 +36,48 @@ type googleIDTokenCerts struct {
 
 type Validator struct {
 	audiences []string
+	issuers   []string
+	certsURL  string
 	client    *http.Client
 	keys      map[string]key
 }
 
-func NewValidator(audiences []string) *Validator {
+func NewGoogleValidator(audiences []string) *Validator {
 	client := httpcache.NewClient("memcache://")
 
 	return &Validator{
 		audiences: audiences,
-		client:    client,
+		issuers: []string{
+			"accounts.google.com",
+			"https://accounts.google.com",
+		},
+		certsURL: googleCertsURL,
+		client:   client,
+	}
+}
+
+func NewAppleValidator(audiences []string) *Validator {
+	client := httpcache.NewClient("memcache://")
+
+	return &Validator{
+		audiences: audiences,
+		issuers: []string{
+			"https://appleid.apple.com",
+		},
+		certsURL: appleCertsURL,
+		client:   client,
 	}
 }
 
 func newValidatorWithClient(audiences []string, client *http.Client) *Validator {
 	return &Validator{
 		audiences: audiences,
-		client:    client,
+		issuers: []string{
+			"accounts.google.com",
+			"https://accounts.google.com",
+		},
+		certsURL: googleCertsURL,
+		client:   client,
 	}
 }
 
@@ -77,8 +105,10 @@ func (v *Validator) Validate(ctx context.Context, idToken string) (jwt.MapClaims
 		return nil, err
 	}
 
-	if err := v.validateAudience(payload); err != nil {
-		return nil, err
+	if len(v.audiences) > 0 {
+		if err := v.validateAudience(payload); err != nil {
+			return nil, err
+		}
 	}
 
 	return token.Claims.(jwt.MapClaims), nil
@@ -126,7 +156,7 @@ func (v *Validator) keyFunc(token *jwt.Token) (interface{}, error) {
 }
 
 func (v *Validator) fetchCerts(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, GOOGLE_CERTS_URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.certsURL, nil)
 	if err != nil {
 		return err
 	}
@@ -161,10 +191,17 @@ func (v *Validator) fetchCerts(ctx context.Context) error {
 
 func (v *Validator) validateIssuer(payload jwt.MapClaims) error {
 	issuer, ok := payload["iss"].(string)
-	if !ok || (issuer != "accounts.google.com" && issuer != "https://accounts.google.com") {
+	if !ok {
 		return errors.New("invalid issuer")
 	}
-	return nil
+
+	for _, allowed := range v.issuers {
+		if issuer == allowed {
+			return nil
+		}
+	}
+
+	return errors.New("invalid issuer")
 }
 
 func validateExpiration(payload jwt.MapClaims) error {

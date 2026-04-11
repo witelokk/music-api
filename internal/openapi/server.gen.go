@@ -24,6 +24,7 @@ const (
 
 // Defines values for GetTokensRequestGrantType.
 const (
+	AppleToken   GetTokensRequestGrantType = "apple_token"
 	Code         GetTokensRequestGrantType = "code"
 	GoogleToken  GetTokensRequestGrantType = "google_token"
 	RefreshToken GetTokensRequestGrantType = "refresh_token"
@@ -32,6 +33,8 @@ const (
 // Valid indicates whether the value is a known member of the GetTokensRequestGrantType enum.
 func (e GetTokensRequestGrantType) Valid() bool {
 	switch e {
+	case AppleToken:
+		return true
 	case Code:
 		return true
 	case GoogleToken:
@@ -170,7 +173,11 @@ type FollowArtistRequest struct {
 // - For `grant_type` = `code`, `email` and `code` are required.
 // - For `grant_type` = `refresh_token`, `refresh_token` is required.
 // - For `grant_type` = `google_token`, `google_token` is required.
+// - For `grant_type` = `apple_token`, `apple_token` is required.
 type GetTokensRequest struct {
+	// AppleToken Reserved for future Apple auth integration.
+	AppleToken *string `json:"apple_token,omitempty"`
+
 	// Code Verification code, required with `grant_type` = `code`.
 	Code *string `json:"code,omitempty"`
 

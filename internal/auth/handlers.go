@@ -203,7 +203,32 @@ func HandleGenerateTokens(
 			AccessToken:  tokens.AccessToken,
 			RefreshToken: tokens.RefreshToken,
 		}), nil
+	case openapi.AppleToken:
+		if body.AppleToken == nil || *body.AppleToken == "" {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "apple_token is required"}), nil
+		}
 
+		tokens, err := service.GetTokensWithAppleIDToken(ctx, *body.AppleToken)
+		if err != nil {
+			switch {
+			case errors.Is(err, ErrInvalidAppleIDToken):
+				reqLogger.Error("invalid Apple ID token",
+					slog.String("error", err.Error()),
+					slog.String("token", *body.AppleToken),
+				)
+				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid apple token"}), nil
+			default:
+				reqLogger.Error("failed to get tokens with apple token",
+					slog.String("error", err.Error()),
+				)
+				return openapi.GenerateTokens500JSONResponse(openapi.Error{Error: "failed to get tokens"}), nil
+			}
+		}
+
+		return openapi.GenerateTokens200JSONResponse(openapi.TokensResponse{
+			AccessToken:  tokens.AccessToken,
+			RefreshToken: tokens.RefreshToken,
+		}), nil
 	default:
 		return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "unsupported grant_type"}), nil
 	}

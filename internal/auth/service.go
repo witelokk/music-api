@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/witelokk/music-api/internal/auth/google_id_token"
+	"github.com/witelokk/music-api/internal/auth/idtoken"
 )
 
 var ErrVerificationCodeRecentlySent = errors.New("verification code recently sent")
@@ -20,6 +20,7 @@ var ErrExpiredRefreshToken = errors.New("refresh token expired")
 var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrInvalidAccessToken = errors.New("invalid access token")
 var ErrInvalidGoogleIDToken = errors.New("invalid Google ID token")
+var ErrInvalidAppleIDToken = errors.New("invalid Apple ID token")
 
 type AuthServiceParams struct {
 	JWTSecret                   string
@@ -27,7 +28,8 @@ type AuthServiceParams struct {
 	RefreshTokenTTL             time.Duration
 	VerificationCodeTTL         time.Duration
 	NewVerificationCodeInterval time.Duration
-	GoogleIdTokenVerifier       *google_id_token.Validator
+	GoogleIdTokenVerifier       *idtoken.Validator
+	AppleIdTokenVerifier        *idtoken.Validator
 }
 
 type AuthService struct {
@@ -143,6 +145,37 @@ func (s *AuthService) GetTokensWithGoogleIDToken(ctx context.Context, idToken st
 		user = &User{
 			Name:  payload["name"].(string),
 			Email: payload["email"].(string),
+		}
+
+		if err := s.createUserWithVerifiedEmail(ctx, user); err != nil {
+			return nil, fmt.Errorf("failed to create user: %w", err)
+		}
+	}
+
+	return s.generateTokensForUser(ctx, user.ID)
+}
+
+func (s *AuthService) GetTokensWithAppleIDToken(ctx context.Context, idToken string) (*Tokens, error) {
+	payload, err := s.params.AppleIdTokenVerifier.Validate(ctx, idToken)
+	if err != nil {
+		return nil, errors.Join(ErrInvalidAppleIDToken, err)
+	}
+
+	email, ok := payload["email"].(string)
+	if !ok || email == "" {
+		return nil, ErrInvalidAppleIDToken
+	}
+
+	name, _ := payload["name"].(string)
+
+	user, err := s.userRepository.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	if user == nil {
+		user = &User{
+			Name:  name,
+			Email: email,
 		}
 
 		if err := s.createUserWithVerifiedEmail(ctx, user); err != nil {
