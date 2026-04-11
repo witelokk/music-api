@@ -21,7 +21,44 @@ func NewHTTPHandler(
 	cfg HTTPHandlerConfig,
 	logger *slog.Logger,
 ) http.Handler {
+	mux := newDocsMux()
+
+	strictHandler := openapi.NewStrictHandlerWithOptions(
+		serverImpl,
+		[]openapi.StrictMiddlewareFunc{
+			auth.NewJWTMiddleware(cfg.JWTSecret, logger),
+		},
+		openapi.StrictHTTPServerOptions{
+			RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			},
+			ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+				if errors.Is(err, auth.ErrUnauthorized) {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusUnauthorized)
+					_ = json.NewEncoder(w).Encode(openapi.Error{Error: "unauthorized"})
+					return
+				}
+
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			},
+		},
+	)
+
+	apiHandler := openapi.HandlerFromMuxWithBaseURL(strictHandler, mux, "/api")
+
+	handlerWithMiddleware := NewHTTPLoggingMiddleware(logger)(
+		NewHTTPRecoveryMiddleware(logger)(
+			newCORSMiddleware()(apiHandler),
+		),
+	)
+
+	return handlerWithMiddleware
+}
+
+func newDocsMux() *http.ServeMux {
 	mux := http.NewServeMux()
+
 	mux.HandleFunc("GET /openapi.yml", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "openapi.yml")
 	})
@@ -48,42 +85,22 @@ func NewHTTPHandler(
 		http.NotFound(w, r)
 	})
 
-	strictHandler := openapi.NewStrictHandlerWithOptions(
-		serverImpl,
-		[]openapi.StrictMiddlewareFunc{
-			auth.NewJWTMiddleware(cfg.JWTSecret, logger),
-		},
-		openapi.StrictHTTPServerOptions{
-			RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			},
-			ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
-				if errors.Is(err, auth.ErrUnauthorized) {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(http.StatusUnauthorized)
-					_ = json.NewEncoder(w).Encode(openapi.Error{Error: "unauthorized"})
-					return
-				}
+	return mux
+}
 
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			},
-		},
-	)
+func newCORSMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
 
-	handler := openapi.HandlerFromMuxWithBaseURL(strictHandler, mux, "/api")
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 
-	corsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-	})
-
-	return NewHTTPLoggingMiddleware(logger)(NewHTTPRecoveryMiddleware(logger)(corsHandler))
+			next.ServeHTTP(w, r)
+		})
+	}
 }
