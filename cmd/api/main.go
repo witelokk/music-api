@@ -84,6 +84,7 @@ func main() {
 			RefreshTokenTTL:             config.Auth.RefreshTokenTTL,
 			VerificationCodeTTL:         config.Auth.VerificationCodeTTL,
 			NewVerificationCodeInterval: config.Auth.NewVerificationCodeInterval,
+			GoogleIdTokenAudiences:       config.Auth.GoogleIdTokenAudiences,
 		},
 	)
 

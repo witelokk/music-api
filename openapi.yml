@@ -892,11 +892,12 @@ components:
         Request to obtain tokens.
         - For `grant_type` = `code`, `email` and `code` are required.
         - For `grant_type` = `refresh_token`, `refresh_token` is required.
+        - For `grant_type` = `google_token`, `google_token` is required.
       properties:
         grant_type:
           type: string
           description: Grant type to use.
-          enum: [code, refresh_token]
+          enum: [code, refresh_token, google_token]
         email:
           type: string
           format: email

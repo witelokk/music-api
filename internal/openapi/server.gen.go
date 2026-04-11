@@ -25,6 +25,7 @@ const (
 // Defines values for GetTokensRequestGrantType.
 const (
 	Code         GetTokensRequestGrantType = "code"
+	GoogleToken  GetTokensRequestGrantType = "google_token"
 	RefreshToken GetTokensRequestGrantType = "refresh_token"
 )
 
@@ -32,6 +33,8 @@ const (
 func (e GetTokensRequestGrantType) Valid() bool {
 	switch e {
 	case Code:
+		return true
+	case GoogleToken:
 		return true
 	case RefreshToken:
 		return true
@@ -166,6 +169,7 @@ type FollowArtistRequest struct {
 // GetTokensRequest Request to obtain tokens.
 // - For `grant_type` = `code`, `email` and `code` are required.
 // - For `grant_type` = `refresh_token`, `refresh_token` is required.
+// - For `grant_type` = `google_token`, `google_token` is required.
 type GetTokensRequest struct {
 	// Code Verification code, required with `grant_type` = `code`.
 	Code *string `json:"code,omitempty"`

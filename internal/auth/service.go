@@ -6,9 +6,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"google.golang.org/api/idtoken"
 )
 
 var ErrVerificationCodeRecentlySent = errors.New("verification code recently sent")
@@ -18,6 +20,7 @@ var ErrInvalidRefreshToken = errors.New("invalid refresh token")
 var ErrExpiredRefreshToken = errors.New("refresh token expired")
 var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrInvalidAccessToken = errors.New("invalid access token")
+var ErrInvalidGoogleIDToken = errors.New("invalid Google ID token")
 
 type AuthServiceParams struct {
 	JWTSecret                   string
@@ -25,6 +28,7 @@ type AuthServiceParams struct {
 	RefreshTokenTTL             time.Duration
 	VerificationCodeTTL         time.Duration
 	NewVerificationCodeInterval time.Duration
+	GoogleIdTokenAudiences      []string
 }
 
 type AuthService struct {
@@ -124,6 +128,34 @@ func (s *AuthService) GetTokensWithRefreshToken(ctx context.Context, refreshToke
 	}
 
 	return s.generateTokensForUser(ctx, stored.UserID)
+}
+
+func (s *AuthService) GetTokensWithGoogleIDToken(ctx context.Context, idToken string) (*Tokens, error) {
+	payload, err := idtoken.Validate(ctx, idToken, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate Google ID token: %w", errors.Join(ErrInvalidGoogleIDToken, err))
+	}
+
+	if !slices.Contains(s.params.GoogleIdTokenAudiences, payload.Audience) {
+		return nil, fmt.Errorf("%w: invalid audience: %s", ErrInvalidGoogleIDToken, payload.Audience)
+	}
+
+	user, err := s.userRepository.GetUserByEmail(ctx, payload.Claims["email"].(string))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+	if user == nil {
+		user = &User{
+			Name:  payload.Claims["name"].(string),
+			Email: payload.Claims["email"].(string),
+		}
+
+		if err := s.createUserWithVerifiedEmail(ctx, user); err != nil {
+			return nil, fmt.Errorf("failed to create user: %w", err)
+		}
+	}
+
+	return s.generateTokensForUser(ctx, user.ID)
 }
 
 func (s *AuthService) GetCurrentUser(ctx context.Context) (*User, error) {

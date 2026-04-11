@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/witelokk/music-api/internal/requestctx"
 	openapi "github.com/witelokk/music-api/internal/openapi"
+	"github.com/witelokk/music-api/internal/requestctx"
 )
 
 func HandleSendVerificationEmail(
@@ -167,6 +167,31 @@ func HandleGenerateTokens(
 				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "refresh token expired"}), nil
 			default:
 				reqLogger.Error("failed to get tokens with refresh token",
+					slog.String("error", err.Error()),
+				)
+				return openapi.GenerateTokens500JSONResponse(openapi.Error{Error: "failed to get tokens"}), nil
+			}
+		}
+
+		return openapi.GenerateTokens200JSONResponse(openapi.TokensResponse{
+			AccessToken:  tokens.AccessToken,
+			RefreshToken: tokens.RefreshToken,
+		}), nil
+	case openapi.GoogleToken:
+		if body.GoogleToken == nil || *body.GoogleToken == "" {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "google_token is required"}), nil
+		}
+
+		tokens, err := service.GetTokensWithGoogleIDToken(ctx, *body.GoogleToken)
+		if err != nil {
+			switch {
+			case errors.Is(err, ErrInvalidGoogleIDToken):
+				reqLogger.Error("invalid Google ID token",
+					slog.String("error", err.Error()),
+				)
+				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid google token"}), nil
+			default:
+				reqLogger.Error("failed to get tokens with google token",
 					slog.String("error", err.Error()),
 				)
 				return openapi.GenerateTokens500JSONResponse(openapi.Error{Error: "failed to get tokens"}), nil
