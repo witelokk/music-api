@@ -78,5 +78,5 @@ func NewHTTPHandler(
 		handler.ServeHTTP(w, r)
 	})
 
-	return NewHTTPLoggingMiddleware(logger)(corsHandler)
+	return NewHTTPLoggingMiddleware(logger)(NewHTTPRecoveryMiddleware(logger)(corsHandler))
 }
