@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
+	releasesapi "github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
 
@@ -68,7 +68,7 @@ func HandleGetArtist(
 		rel := openapi.Release{
 			Id:         uuid.MustParse(r.ID),
 			Name:       r.Name,
-			Type:       strconv.Itoa(r.Type),
+			Type:       releasesapi.MapReleaseType(r.Type),
 			ReleasedAt: r.ReleaseAt.Format("2006-01-02"),
 			Songs: openapi.SongList{
 				Count: 0,

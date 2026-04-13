@@ -3,7 +3,6 @@ package home
 import (
 	"context"
 	"log/slog"
-	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 
 	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
+	releasesapi "github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
 
@@ -89,7 +89,7 @@ func HandleGetHomeScreenLayout(
 				Id:         openapi_types.UUID(uuid.MustParse(rel.ID)),
 				Name:       rel.Name,
 				CoverUrl:   rel.CoverURL,
-				Type:       strconv.Itoa(rel.Type),
+				Type:       releasesapi.MapReleaseType(rel.Type),
 				ReleasedAt: rel.ReleaseAt.Format("2006-01-02"),
 				Artists: openapi.ArtistList{
 					Artists: artistSummaries,

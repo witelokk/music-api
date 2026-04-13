@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -80,7 +79,7 @@ func HandleGetRelease(
 	resp := openapi.Release{
 		Id:         uuid.MustParse(release.ID),
 		Name:       release.Name,
-		Type:       strconv.Itoa(release.Type),
+		Type:       MapReleaseType(release.Type),
 		ReleasedAt: release.ReleaseAt.Format("2006-01-02"),
 		Songs: openapi.SongList{
 			Count: len(songs),

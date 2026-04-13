@@ -46,6 +46,27 @@ func (e GetTokensRequestGrantType) Valid() bool {
 	}
 }
 
+// Defines values for ReleaseType.
+const (
+	Album  ReleaseType = "album"
+	Ep     ReleaseType = "ep"
+	Single ReleaseType = "single"
+)
+
+// Valid indicates whether the value is a known member of the ReleaseType enum.
+func (e ReleaseType) Valid() bool {
+	switch e {
+	case Album:
+		return true
+	case Ep:
+		return true
+	case Single:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResultItemType.
 const (
 	SearchResultItemTypeArtist   SearchResultItemType = "artist"
@@ -242,8 +263,11 @@ type Release struct {
 	Name       string             `json:"name"`
 	ReleasedAt string             `json:"released_at"`
 	Songs      SongList           `json:"songs"`
-	Type       string             `json:"type"`
+	Type       ReleaseType        `json:"type"`
 }
+
+// ReleaseType defines model for Release.Type.
+type ReleaseType string
 
 // ReleaseList defines model for ReleaseList.
 type ReleaseList struct {
