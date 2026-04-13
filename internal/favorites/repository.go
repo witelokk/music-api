@@ -22,6 +22,13 @@ type FavoriteSong struct {
 	CoverURL        *string
 	DurationSeconds int
 	StreamURL       string
+	Artists         []ArtistSummary
+}
+
+type ArtistSummary struct {
+	ID        string
+	Name      string
+	AvatarURL *string
 }
 
 func NewPostgresFavoritesRepository(pool *pgxpool.Pool) *PostgresFavoritesRepository {
@@ -51,11 +58,20 @@ func (r *PostgresFavoritesRepository) RemoveFavorite(ctx context.Context, userID
 
 func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, userID string) ([]FavoriteSong, error) {
 	const query = `
-		SELECT s.id, s.name, s.cover_url, s.duration, s.stream_url
+		SELECT s.id,
+		       s.name,
+		       s.cover_url,
+		       s.duration,
+		       s.stream_url,
+		       a.id AS artist_id,
+		       a.name AS artist_name,
+		       a.avatar_url
 		FROM favorites f
 		JOIN songs s ON s.id = f.song_id
+		LEFT JOIN song_artists sa ON sa.song_id = s.id
+		LEFT JOIN artists a ON a.id = sa.artist_id
 		WHERE f.user_id = $1
-		ORDER BY f.added_at DESC
+		ORDER BY f.added_at DESC, a.name
 	`
 
 	rows, err := r.pool.Query(ctx, query, userID)
@@ -64,25 +80,53 @@ func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, user
 	}
 	defer rows.Close()
 
-	var result []FavoriteSong
+	var (
+		result     []FavoriteSong
+		currentID  string
+		currentSong FavoriteSong
+	)
+
 	for rows.Next() {
 		var (
-			id       string
-			name     string
-			coverURL *string
-			duration int
-			stream   string
+			id           string
+			name         string
+			coverURL     *string
+			duration     int
+			stream       string
+			artistID     *string
+			artistName   *string
+			artistAvatar *string
 		)
-		if err := rows.Scan(&id, &name, &coverURL, &duration, &stream); err != nil {
+		if err := rows.Scan(&id, &name, &coverURL, &duration, &stream, &artistID, &artistName, &artistAvatar); err != nil {
 			return nil, err
 		}
-		result = append(result, FavoriteSong{
-			ID:              id,
-			Name:            name,
-			CoverURL:        coverURL,
-			DurationSeconds: duration,
-			StreamURL:       stream,
-		})
+
+		if id != currentID {
+			if currentID != "" {
+				result = append(result, currentSong)
+			}
+			currentID = id
+			currentSong = FavoriteSong{
+				ID:              id,
+				Name:            name,
+				CoverURL:        coverURL,
+				DurationSeconds: duration,
+				StreamURL:       stream,
+				Artists:         nil,
+			}
+		}
+
+		if artistID != nil && artistName != nil {
+			currentSong.Artists = append(currentSong.Artists, ArtistSummary{
+				ID:        *artistID,
+				Name:      *artistName,
+				AvatarURL: artistAvatar,
+			})
+		}
+	}
+
+	if currentID != "" {
+		result = append(result, currentSong)
 	}
 
 	return result, rows.Err()

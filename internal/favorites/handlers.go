@@ -16,7 +16,6 @@ func HandleGetFavorites(
 	logger *slog.Logger,
 	req openapi.GetFavoritesRequestObject,
 ) (openapi.GetFavoritesResponseObject, error) {
-	_ = req
 	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 
 	userID := auth.UserIDFromContext(ctx)
@@ -24,7 +23,7 @@ func HandleGetFavorites(
 		return openapi.GetFavorites500JSONResponse(openapi.Error{Error: "failed to fetch favorite songs"}), nil
 	}
 
-	songsRows, err := favoritesService.GetFavoriteSongs(ctx, userID)
+	songs, err := favoritesService.GetFavoriteSongs(ctx, userID)
 	if err != nil {
 		reqLogger.Error("failed to get favorite song ids",
 			slog.String("user_id", userID),
@@ -34,17 +33,29 @@ func HandleGetFavorites(
 	}
 
 	var songsList []openapi.Song
-	for _, song := range songsRows {
-		respSong := openapi.Song{
-			Id:              uuid.MustParse(song.ID),
-			Name:            song.Name,
-			DurationSeconds: song.DurationSeconds,
-			StreamUrl:       song.StreamURL,
-			IsFavorite:      true,
-			Artists:         []openapi.ArtistSummary{},
+	for _, sng := range songs {
+		artistSummaries := make([]openapi.ArtistSummary, 0, len(sng.Artists))
+		for _, a := range sng.Artists {
+			summary := openapi.ArtistSummary{
+				Id:   uuid.MustParse(a.ID),
+				Name: a.Name,
+			}
+			if a.AvatarURL != nil {
+				summary.AvatarUrl = a.AvatarURL
+			}
+			artistSummaries = append(artistSummaries, summary)
 		}
-		if song.CoverURL != nil {
-			respSong.CoverUrl = song.CoverURL
+
+		respSong := openapi.Song{
+			Id:              uuid.MustParse(sng.ID),
+			Name:            sng.Name,
+			DurationSeconds: sng.DurationSeconds,
+			StreamUrl:       sng.StreamURL,
+			IsFavorite:      true,
+			Artists:         artistSummaries,
+		}
+		if sng.CoverURL != nil {
+			respSong.CoverUrl = sng.CoverURL
 		}
 
 		songsList = append(songsList, respSong)
