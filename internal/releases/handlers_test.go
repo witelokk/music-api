@@ -50,9 +50,23 @@ func TestHandleGetRelease_Success(t *testing.T) {
 	id := uuid.New()
 
 	rel := &Release{
-		ID:        id.String(),
-		Name:      "Test Release",
-		Type:      1,
+		ID:   id.String(),
+		Name: "Test Release",
+		Type: 1,
+		Songs: []ReleaseSong{
+			{
+				ID:              uuid.New().String(),
+				Name:            "Test Song",
+				DurationSeconds: 180,
+				StreamURL:       "http://example.com/stream",
+				Artists: []ReleaseArtist{
+					{
+						ID:   uuid.New().String(),
+						Name: "Artist 1",
+					},
+				},
+			},
+		},
 		ReleaseAt: time.Now(),
 	}
 
@@ -71,5 +85,15 @@ func TestHandleGetRelease_Success(t *testing.T) {
 	}
 	if okResp.Name != rel.Name {
 		t.Fatalf("expected name %q, got %q", rel.Name, okResp.Name)
+	}
+
+	if len(okResp.Songs.Songs) != 1 {
+		t.Fatalf("expected 1 song, got %d", len(okResp.Songs.Songs))
+	}
+	if len(okResp.Songs.Songs[0].Artists) != 1 {
+		t.Fatalf("expected 1 artist for song, got %d", len(okResp.Songs.Songs[0].Artists))
+	}
+	if okResp.Songs.Songs[0].Artists[0].Name != "Artist 1" {
+		t.Fatalf("expected artist name %q, got %q", "Artist 1", okResp.Songs.Songs[0].Artists[0].Name)
 	}
 }

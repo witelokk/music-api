@@ -37,6 +37,15 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 		ORDER BY s.name
 	`
 
+	const songArtistsQuery = `
+		SELECT rs.song_id, a.id, a.name, a.avatar_url
+		FROM release_songs rs
+		JOIN song_artists sa ON sa.song_id = rs.song_id
+		JOIN artists a ON a.id = sa.artist_id
+		WHERE rs.release_id = $1
+		ORDER BY rs.song_id, a.name
+	`
+
 	const artistsQuery = `
 		SELECT DISTINCT a.id, a.name, a.avatar_url
 		FROM release_songs rs
@@ -96,6 +105,39 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	}
 	if err := songRows.Err(); err != nil {
 		return nil, err
+	}
+
+	artistRowsBySong, err := tx.Query(ctx, songArtistsQuery, id)
+	if err != nil {
+		return nil, err
+	}
+	defer artistRowsBySong.Close()
+
+	songArtists := make(map[string][]ReleaseArtist)
+	for artistRowsBySong.Next() {
+		var (
+			songID    string
+			artistID  string
+			name      string
+			avatarURL *string
+		)
+		if err := artistRowsBySong.Scan(&songID, &artistID, &name, &avatarURL); err != nil {
+			return nil, err
+		}
+		songArtists[songID] = append(songArtists[songID], ReleaseArtist{
+			ID:        artistID,
+			Name:      name,
+			AvatarURL: avatarURL,
+		})
+	}
+	if err := artistRowsBySong.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range songs {
+		if artists, ok := songArtists[songs[i].ID]; ok {
+			songs[i].Artists = artists
+		}
 	}
 
 	artistRows, err := tx.Query(ctx, artistsQuery, id)

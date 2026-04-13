@@ -37,13 +37,25 @@ func HandleGetRelease(
 
 	songs := make([]openapi.Song, 0, len(release.Songs))
 	for _, s := range release.Songs {
+		artistSummaries := make([]openapi.ArtistSummary, 0, len(s.Artists))
+		for _, a := range s.Artists {
+			summary := openapi.ArtistSummary{
+				Id:   uuid.MustParse(a.ID),
+				Name: a.Name,
+			}
+			if a.AvatarURL != nil {
+				summary.AvatarUrl = a.AvatarURL
+			}
+			artistSummaries = append(artistSummaries, summary)
+		}
+
 		song := openapi.Song{
 			Id:              uuid.MustParse(s.ID),
 			Name:            s.Name,
 			DurationSeconds: s.DurationSeconds,
 			StreamUrl:       s.StreamURL,
 			IsFavorite:      false,
-			Artists:         []openapi.ArtistSummary{},
+			Artists:         artistSummaries,
 		}
 		if s.CoverURL != nil {
 			song.CoverUrl = s.CoverURL

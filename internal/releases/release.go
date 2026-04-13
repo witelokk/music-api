@@ -18,6 +18,7 @@ type ReleaseSong struct {
 	CoverURL        *string
 	DurationSeconds int
 	StreamURL       string
+	Artists         []ReleaseArtist
 }
 
 type ReleaseArtist struct {
