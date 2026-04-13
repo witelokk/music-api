@@ -8,6 +8,7 @@ import (
 	"github.com/witelokk/music-api/internal/artists"
 	"github.com/witelokk/music-api/internal/auth"
 	"github.com/witelokk/music-api/internal/favorites"
+	"github.com/witelokk/music-api/internal/home"
 	"github.com/witelokk/music-api/internal/followings"
 	"github.com/witelokk/music-api/internal/media"
 	openapi "github.com/witelokk/music-api/internal/openapi"
@@ -19,6 +20,7 @@ import (
 
 type Server struct {
 	authService       *auth.AuthService
+	homeService       *home.Service
 	songsService      *songs.SongsService
 	artistsService    *artists.ArtistsService
 	releasesService   *releases.ReleasesService
@@ -32,6 +34,7 @@ type Server struct {
 
 func NewServer(
 	authService *auth.AuthService,
+	homeService *home.Service,
 	songsService *songs.SongsService,
 	artistsService *artists.ArtistsService,
 	releasesService *releases.ReleasesService,
@@ -44,6 +47,7 @@ func NewServer(
 ) openapi.StrictServerInterface {
 	return &Server{
 		authService:       authService,
+		homeService:       homeService,
 		songsService:      songsService,
 		artistsService:    artistsService,
 		releasesService:   releasesService,
@@ -149,11 +153,5 @@ func (s *Server) RemoveSongFromPlaylist(ctx context.Context, req openapi.RemoveS
 }
 
 func (s *Server) GetHomeScreenLayout(ctx context.Context, req openapi.GetHomeScreenLayoutRequestObject) (openapi.GetHomeScreenLayoutResponseObject, error) {
-	// TODO: implement home screen layout aggregation.
-	// For now, return an empty layout structure.
-	return openapi.GetHomeScreenLayout200JSONResponse{
-		Playlists:       openapi.PlaylistsSummary{Count: 0, Playlists: []openapi.PlaylistSummary{}},
-		FollowedArtists: openapi.ArtistList{Count: 0, Artists: []openapi.ArtistSummary{}, Names: ""},
-		Sections:        []openapi.HomeScreenSection{},
-	}, nil
+	return home.HandleGetHomeScreenLayout(ctx, s.homeService, s.logger, req)
 }

@@ -143,4 +143,3 @@ func TestPlaylistsService_AddSongToPlaylist_NotFound(t *testing.T) {
 		t.Fatalf("expected ErrPlaylistNotFound, got %v", err)
 	}
 }
-

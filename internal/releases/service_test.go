@@ -15,6 +15,10 @@ func (r *fakeReleasesRepo) GetReleaseByID(ctx context.Context, id string) (*Rele
 	return r.release, r.err
 }
 
+func (r *fakeReleasesRepo) GetRandomReleases(ctx context.Context, seed string, limit int) ([]Release, error) {
+	return nil, nil
+}
+
 func TestService_GetRelease_Success(t *testing.T) {
 	want := &Release{
 		ID:   "release-id",

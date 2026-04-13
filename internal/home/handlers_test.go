@@ -1,0 +1,78 @@
+package home
+
+import (
+	"context"
+	"io"
+	"log/slog"
+	"testing"
+	"time"
+
+	"github.com/witelokk/music-api/internal/auth"
+	openapi "github.com/witelokk/music-api/internal/openapi"
+	"github.com/witelokk/music-api/internal/followings"
+	"github.com/witelokk/music-api/internal/playlists"
+	"github.com/witelokk/music-api/internal/releases"
+)
+
+func newTestLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
+}
+
+func TestHandleGetHomeScreenLayout_NoUserID(t *testing.T) {
+	logger := newTestLogger()
+
+	resp, err := HandleGetHomeScreenLayout(context.Background(), nil, logger, openapi.GetHomeScreenLayoutRequestObject{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := resp.(openapi.GetHomeScreenLayout500JSONResponse); !ok {
+		t.Fatalf("expected 500 response, got %T", resp)
+	}
+}
+
+func TestHandleGetHomeScreenLayout_OK(t *testing.T) {
+	logger := newTestLogger()
+	playlistsRepo := &fakePlaylistsRepo{
+		playlists: []playlists.PlaylistSummary{
+			{ID: "00000000-0000-0000-0000-000000000001", Name: "Playlist 1"},
+		},
+	}
+	followingsRepo := &fakeFollowingsRepo{
+		artists: []followings.FollowedArtist{
+			{ID: "00000000-0000-0000-0000-000000000002", Name: "Artist 1"},
+		},
+	}
+	releasesRepo := &fakeReleasesRepo{
+		releases: []releases.Release{
+			{
+				ID:        "00000000-0000-0000-0000-000000000003",
+				Name:      "Release 1",
+				ReleaseAt: time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+	service := NewService(playlistsRepo, followingsRepo, releasesRepo)
+
+	ctx := auth.WithUserID(context.Background(), "user-id")
+
+	resp, err := HandleGetHomeScreenLayout(ctx, service, logger, openapi.GetHomeScreenLayoutRequestObject{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	okResp, ok := resp.(openapi.GetHomeScreenLayout200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+
+	if okResp.Playlists.Count != 1 {
+		t.Fatalf("expected 1 playlist, got %d", okResp.Playlists.Count)
+	}
+	if okResp.FollowedArtists.Count != 1 {
+		t.Fatalf("expected 1 followed artist, got %d", okResp.FollowedArtists.Count)
+	}
+	if len(okResp.Sections) != 1 {
+		t.Fatalf("expected 1 section, got %d", len(okResp.Sections))
+	}
+}

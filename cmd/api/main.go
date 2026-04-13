@@ -15,6 +15,7 @@ import (
 	"github.com/witelokk/music-api/internal/auth/idtoken"
 	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/followings"
+	"github.com/witelokk/music-api/internal/home"
 	"github.com/witelokk/music-api/internal/media"
 	"github.com/witelokk/music-api/internal/playlists"
 	"github.com/witelokk/music-api/internal/releases"
@@ -99,6 +100,7 @@ func main() {
 	followingsService := followings.NewFollowingsService(followingsRepository)
 	playlistsService := playlists.NewPlaylistsService(playlistsRepository)
 	searchService := search.NewService(searchRepository)
+	homeService := home.NewService(playlistsRepository, followingsRepository, releasesRepository)
 
 	var mediaService *media.MediaService
 	if err == nil {
@@ -106,7 +108,7 @@ func main() {
 		mediaService = media.NewMediaService(storage)
 	}
 
-	serverImpl := internal.NewServer(authService, songsService, artistsService, releasesService, favoritesService, followingsService, mediaService, playlistsService, searchService, logger)
+	serverImpl := internal.NewServer(authService, homeService, songsService, artistsService, releasesService, favoritesService, followingsService, mediaService, playlistsService, searchService, logger)
 	httpHandler := internal.NewHTTPHandler(
 		serverImpl,
 		internal.HTTPHandlerConfig{

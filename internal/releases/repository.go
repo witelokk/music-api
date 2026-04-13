@@ -11,6 +11,7 @@ import (
 
 type ReleasesRepository interface {
 	GetReleaseByID(ctx context.Context, id string) (*Release, error)
+	GetRandomReleases(ctx context.Context, seed string, limit int) ([]Release, error)
 }
 
 type PostgresReleasesRepository struct {
@@ -136,4 +137,103 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 		Songs:     songs,
 		Artists:   artists,
 	}, nil
+}
+
+func (r *PostgresReleasesRepository) GetRandomReleases(ctx context.Context, seed string, limit int) ([]Release, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	const query = `
+		SELECT r.id, r.name, r.cover_url, r.type, r.release_at
+		FROM releases r
+		ORDER BY md5(r.id::text || $1)
+		LIMIT $2
+	`
+
+	rows, err := r.pool.Query(ctx, query, seed, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []Release
+	for rows.Next() {
+		var (
+			id        string
+			name      string
+			coverURL  *string
+			typ       int
+			releaseAt time.Time
+		)
+		if err := rows.Scan(&id, &name, &coverURL, &typ, &releaseAt); err != nil {
+			return nil, err
+		}
+		result = append(result, Release{
+			ID:        id,
+			Name:      name,
+			CoverURL:  coverURL,
+			Type:      typ,
+			ReleaseAt: releaseAt,
+			Songs:     nil,
+			Artists:   nil,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return result, nil
+	}
+
+	ids := make([]string, 0, len(result))
+	for _, rel := range result {
+		ids = append(ids, rel.ID)
+	}
+
+	const artistsQuery = `
+		SELECT rs.release_id, a.id, a.name, a.avatar_url
+		FROM release_songs rs
+		JOIN song_artists sa ON sa.song_id = rs.song_id
+		JOIN artists a ON a.id = sa.artist_id
+		WHERE rs.release_id = ANY($1::uuid[])
+		ORDER BY a.name
+	`
+
+	artistRows, err := r.pool.Query(ctx, artistsQuery, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer artistRows.Close()
+
+	artistsByRelease := make(map[string][]ReleaseArtist)
+	for artistRows.Next() {
+		var (
+			releaseID string
+			artistID  string
+			name      string
+			avatarURL *string
+		)
+		if err := artistRows.Scan(&releaseID, &artistID, &name, &avatarURL); err != nil {
+			return nil, err
+		}
+		artistsByRelease[releaseID] = append(artistsByRelease[releaseID], ReleaseArtist{
+			ID:        artistID,
+			Name:      name,
+			AvatarURL: avatarURL,
+		})
+	}
+	if err := artistRows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i, rel := range result {
+		if artists, ok := artistsByRelease[rel.ID]; ok {
+			result[i].Artists = artists
+		}
+	}
+
+	return result, nil
 }
