@@ -3,13 +3,13 @@ package search
 import (
 	"context"
 	"log/slog"
-	"strconv"
 
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
+	releasesapi "github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
 
@@ -110,7 +110,7 @@ func HandleSearch(
 					Id:         uuidMustParse(item.Release.ID),
 					Name:       item.Release.Name,
 					CoverUrl:   item.Release.CoverURL,
-					Type:       intToString(item.Release.Type),
+					Type:       releasesapi.MapReleaseType(item.Release.Type),
 					ReleasedAt: item.Release.ReleaseAt,
 				}
 			}
@@ -144,8 +144,4 @@ func HandleSearch(
 
 func uuidMustParse(id string) openapi_types.UUID {
 	return openapi_types.UUID(uuid.MustParse(id))
-}
-
-func intToString(v int) string {
-	return strconv.Itoa(v)
 }

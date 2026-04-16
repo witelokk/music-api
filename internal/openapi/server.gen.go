@@ -266,9 +266,6 @@ type Release struct {
 	Type       ReleaseType        `json:"type"`
 }
 
-// ReleaseType defines model for Release.Type.
-type ReleaseType string
-
 // ReleaseList defines model for ReleaseList.
 type ReleaseList struct {
 	Count    int       `json:"count"`
@@ -281,8 +278,11 @@ type ReleaseSummary struct {
 	Id         openapi_types.UUID `json:"id"`
 	Name       string             `json:"name"`
 	ReleasedAt string             `json:"released_at"`
-	Type       string             `json:"type"`
+	Type       ReleaseType        `json:"type"`
 }
+
+// ReleaseType defines model for ReleaseType.
+type ReleaseType string
 
 // RemoveSongFromPlaylistRequest defines model for RemoveSongFromPlaylistRequest.
 type RemoveSongFromPlaylistRequest struct {

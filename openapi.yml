@@ -1070,8 +1070,7 @@ components:
           type: string
           nullable: true
         type:
-          type: string
-          enum: ["single", "album", "ep"]
+          $ref: '#/components/schemas/ReleaseType'
         released_at:
           type: string
         songs:
@@ -1203,6 +1202,10 @@ components:
       required:
         - error
 
+    ReleaseType:
+      type: string
+      enum: ["single", "album", "ep"]
+
     ReleaseSummary:
       type: object
       properties:
@@ -1215,7 +1218,7 @@ components:
           type: string
           nullable: true
         type:
-          type: string
+          $ref: '#/components/schemas/ReleaseType'
         released_at:
           type: string
       required:
