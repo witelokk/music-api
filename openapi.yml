@@ -1137,6 +1137,19 @@ components:
         - count
         - releases
 
+    ReleaseSummaryList:
+      type: object
+      properties:
+        count:
+          type: integer
+        releases:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseSummary'
+      required:
+        - count
+        - releases
+
     Playlist:
       type: object
       properties:
@@ -1313,15 +1326,14 @@ components:
     HomeScreenSection:
       type: object
       properties:
-        title:
-          type: string
-        title_ru:
-          type: string
+        titles:
+          type: object
+          additionalProperties:
+            type: string
         releases:
-          $ref: '#/components/schemas/ReleaseList'
+          $ref: '#/components/schemas/ReleaseSummaryList'
       required:
-        - title
-        - title_ru
+        - titles
         - releases
 
     HomeScreenLayout:

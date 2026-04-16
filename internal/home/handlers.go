@@ -69,44 +69,20 @@ func HandleGetHomeScreenLayout(
 
 	sections := make([]openapi.HomeScreenSection, 0, len(layout.Sections))
 	for _, sec := range layout.Sections {
-		releases := make([]openapi.Release, 0, len(sec.Releases))
+		releases := make([]openapi.ReleaseSummary, 0, len(sec.Releases))
 		for _, rel := range sec.Releases {
-			artistSummaries := make([]openapi.ArtistSummary, 0, len(rel.Artists))
-			artistNames := make([]string, 0, len(rel.Artists))
-			for _, a := range rel.Artists {
-				summary := openapi.ArtistSummary{
-					Id:   openapi_types.UUID(uuid.MustParse(a.ID)),
-					Name: a.Name,
-				}
-				if a.AvatarURL != nil {
-					summary.AvatarUrl = a.AvatarURL
-				}
-				artistSummaries = append(artistSummaries, summary)
-				artistNames = append(artistNames, a.Name)
-			}
-
-			releases = append(releases, openapi.Release{
+			releases = append(releases, openapi.ReleaseSummary{
 				Id:         openapi_types.UUID(uuid.MustParse(rel.ID)),
 				Name:       rel.Name,
 				CoverUrl:   rel.CoverURL,
 				Type:       releasesapi.MapReleaseType(rel.Type),
 				ReleasedAt: rel.ReleaseAt.Format("2006-01-02"),
-				Artists: openapi.ArtistList{
-					Artists: artistSummaries,
-					Count:   len(artistSummaries),
-					Names:   strings.Join(artistNames, ", "),
-				},
-				Songs: openapi.SongList{
-					Count: 0,
-					Songs: make([]openapi.Song, 0),
-				},
 			})
 		}
 
 		sections = append(sections, openapi.HomeScreenSection{
-			Title:   sec.Title,
-			TitleRu: sec.TitleRu,
-			Releases: openapi.ReleaseList{
+			Titles: sec.Titles,
+			Releases: openapi.ReleaseSummaryList{
 				Count:    len(releases),
 				Releases: releases,
 			},

@@ -292,9 +292,8 @@ type HomeScreenLayout struct {
 
 // HomeScreenSection defines model for HomeScreenSection.
 type HomeScreenSection struct {
-	Releases ReleaseList `json:"releases"`
-	Title    string      `json:"title"`
-	TitleRu  string      `json:"title_ru"`
+	Releases ReleaseSummaryList `json:"releases"`
+	Titles   map[string]string  `json:"titles"`
 }
 
 // Playlist defines model for Playlist.
@@ -344,6 +343,12 @@ type ReleaseSummary struct {
 	Name       string             `json:"name"`
 	ReleasedAt string             `json:"released_at"`
 	Type       ReleaseType        `json:"type"`
+}
+
+// ReleaseSummaryList defines model for ReleaseSummaryList.
+type ReleaseSummaryList struct {
+	Count    int              `json:"count"`
+	Releases []ReleaseSummary `json:"releases"`
 }
 
 // ReleaseType defines model for ReleaseType.

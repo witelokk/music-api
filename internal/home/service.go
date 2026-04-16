@@ -11,8 +11,7 @@ import (
 )
 
 type Section struct {
-	Title    string
-	TitleRu  string
+	Titles   map[string]string
 	Releases []releases.Release
 }
 
@@ -72,10 +71,10 @@ func (s *Service) GetHomeScreenLayout(ctx context.Context, userID string, now ti
 
 func buildSections(seed string, allReleases []releases.Release) []Section {
 	sectionDefs := []Section{
-		{Title: "Featured Releases", TitleRu: "Избранные релизы"},
-		{Title: "Popular This Week", TitleRu: "Популярное на этой неделе"},
-		{Title: "Discover New Music", TitleRu: "Откройте новую музыку"},
-		{Title: "Recently Added", TitleRu: "Недавно добавленные"},
+		{Titles: map[string]string{"en": "Featured Releases", "ru": "Избранные релизы"}},
+		{Titles: map[string]string{"en": "Popular This Week", "ru": "Популярное на этой неделе"}},
+		{Titles: map[string]string{"en": "Discover New Music", "ru": "Откройте новую музыку"}},
+		{Titles: map[string]string{"en": "Recently Added", "ru": "Недавно добавленные"}},
 	}
 
 	if len(sectionDefs) == 0 {
@@ -100,8 +99,8 @@ func buildSections(seed string, allReleases []releases.Release) []Section {
 		if len(allReleases) > 0 {
 			// Derive per-section seed from base seed + title.
 			var sh int64
-			for i := 0; i < len(def.Title); i++ {
-				sh = sh*31 + int64(def.Title[i])
+			for i := 0; i < len(def.Titles["en"]); i++ {
+				sh = sh*31 + int64(def.Titles["en"][i])
 			}
 			srnd := rand.New(rand.NewSource(sh))
 
@@ -118,8 +117,7 @@ func buildSections(seed string, allReleases []releases.Release) []Section {
 		}
 
 		sections = append(sections, Section{
-			Title:    def.Title,
-			TitleRu:  def.TitleRu,
+			Titles:   def.Titles,
 			Releases: sectionReleases,
 		})
 	}

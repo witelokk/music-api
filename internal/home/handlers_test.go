@@ -72,7 +72,20 @@ func TestHandleGetHomeScreenLayout_OK(t *testing.T) {
 	if okResp.FollowedArtists.Count != 1 {
 		t.Fatalf("expected 1 followed artist, got %d", okResp.FollowedArtists.Count)
 	}
-	if len(okResp.Sections) != 1 {
-		t.Fatalf("expected 1 section, got %d", len(okResp.Sections))
+	if len(okResp.Sections) == 0 {
+		t.Fatalf("expected at least 1 section, got %d", len(okResp.Sections))
+	}
+	if okResp.Sections[0].Titles["en"] == "" || okResp.Sections[0].Titles["ru"] == "" {
+		t.Fatalf("expected localized titles, got %+v", okResp.Sections[0].Titles)
+	}
+	if okResp.Sections[0].Releases.Count != 1 {
+		t.Fatalf("expected 1 release in first section, got %d", okResp.Sections[0].Releases.Count)
+	}
+	firstRelease := okResp.Sections[0].Releases.Releases[0]
+	if firstRelease.Name != "Release 1" {
+		t.Fatalf("expected release name %q, got %q", "Release 1", firstRelease.Name)
+	}
+	if firstRelease.ReleasedAt != "2024-03-15" {
+		t.Fatalf("expected release date %q, got %q", "2024-03-15", firstRelease.ReleasedAt)
 	}
 }

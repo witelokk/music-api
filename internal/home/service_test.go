@@ -115,7 +115,7 @@ func TestService_GetHomeScreenLayout_UsesSeededRepos(t *testing.T) {
 	// Each section should have some releases drawn from the fake repo.
 	for _, sec := range layout.Sections {
 		if len(sec.Releases) == 0 {
-			t.Fatalf("expected section %q to have releases", sec.Title)
+			t.Fatalf("expected section %q to have releases", sec.Titles["en"])
 		}
 	}
 }
