@@ -244,13 +244,6 @@ func HandleGetCurrentUser(
 
 	user, err := service.GetCurrentUser(ctx)
 	if err != nil {
-		if errors.Is(err, ErrInvalidAccessToken) {
-			reqLogger.Warn("invalid or missing user in context for GetCurrentUser",
-				slog.String("error", err.Error()),
-			)
-			return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "unauthorized"}), nil
-		}
-
 		reqLogger.Error("failed to get current user",
 			slog.String("error", err.Error()),
 		)

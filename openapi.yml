@@ -323,12 +323,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CurrentUser'
-        '401':
-          description: Missing or invalid access token.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Failed to fetch current user.
           content:

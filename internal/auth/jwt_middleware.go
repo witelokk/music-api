@@ -16,7 +16,7 @@ import (
 var ErrUnauthorized = errors.New("unauthorized")
 
 func NewJWTMiddleware(jwtSecret string, logger *slog.Logger) openapi.StrictMiddlewareFunc {
-	return func(next openapi.StrictHandlerFunc, operationID string) openapi.StrictHandlerFunc {
+	return func(next openapi.StrictHandlerFunc, _ string) openapi.StrictHandlerFunc {
 		return func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 			reqLogger := requestctx.LoggerFromContext(ctx, logger)
 
@@ -29,17 +29,11 @@ func NewJWTMiddleware(jwtSecret string, logger *slog.Logger) openapi.StrictMiddl
 
 			authHeader := r.Header.Get("Authorization")
 			if !strings.HasPrefix(authHeader, "Bearer ") {
-				if operationID == "GetCurrentUser" {
-					return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "missing or invalid authorization header"}), nil
-				}
 				return nil, ErrUnauthorized
 			}
 
 			token := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 			if token == "" {
-				if operationID == "GetCurrentUser" {
-					return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "missing or invalid authorization header"}), nil
-				}
 				return nil, ErrUnauthorized
 			}
 
@@ -57,27 +51,18 @@ func NewJWTMiddleware(jwtSecret string, logger *slog.Logger) openapi.StrictMiddl
 				} else {
 					reqLogger.Warn("invalid access token")
 				}
-				if operationID == "GetCurrentUser" {
-					return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "invalid or expired access token"}), nil
-				}
 				return nil, ErrUnauthorized
 			}
 
 			claims, ok := parsed.Claims.(jwt.MapClaims)
 			if !ok {
 				reqLogger.Warn("invalid access token claims")
-				if operationID == "GetCurrentUser" {
-					return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "invalid or expired access token"}), nil
-				}
 				return nil, ErrUnauthorized
 			}
 
 			sub, ok := claims["sub"].(string)
 			if !ok || sub == "" {
 				reqLogger.Warn("missing sub claim in access token")
-				if operationID == "GetCurrentUser" {
-					return openapi.GetCurrentUser401JSONResponse(openapi.Error{Error: "invalid or expired access token"}), nil
-				}
 				return nil, ErrUnauthorized
 			}
 

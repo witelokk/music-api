@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -31,20 +32,15 @@ func TestJWTMiddleware_MissingAuthorizationHeader(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	resp, err := handler(ctx, w, req, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("expected ErrUnauthorized, got resp=%T err=%v", resp, err)
 	}
 
 	if called {
 		t.Fatalf("expected next handler not to be called")
 	}
-
-	unauth, ok := resp.(openapi.GetCurrentUser401JSONResponse)
-	if !ok {
-		t.Fatalf("expected 401 response, got %T", resp)
-	}
-	if unauth.Error == "" {
-		t.Fatalf("expected error message, got empty")
+	if resp != nil {
+		t.Fatalf("expected nil response, got %T", resp)
 	}
 }
 

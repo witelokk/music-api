@@ -363,7 +363,7 @@ func TestHandleGenerateTokens_RefreshGrant_Success(t *testing.T) {
 	}
 }
 
-func TestHandleGetCurrentUser_UnauthorizedWhenNoUserInContext(t *testing.T) {
+func TestHandleGetCurrentUser_InternalErrorWhenNoUserInContext(t *testing.T) {
 	svc, _, _, _, _ := newTestAuthService()
 	logger := newTestLogger()
 	ctx := context.Background()
@@ -374,13 +374,12 @@ func TestHandleGetCurrentUser_UnauthorizedWhenNoUserInContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	errResp, ok := resp.(openapi.GetCurrentUser401JSONResponse)
+	errResp, ok := resp.(openapi.GetCurrentUser500JSONResponse)
 	if !ok {
-		t.Fatalf("expected 401 response, got %T", resp)
+		t.Fatalf("expected 500 response, got %T", resp)
 	}
-	if errResp.Error != "unauthorized" {
-		t.Fatalf("expected error %q, got %q", "unauthorized", errResp.Error)
+	if errResp.Error != "failed to fetch current user" {
+		t.Fatalf("expected error %q, got %q", "failed to fetch current user", errResp.Error)
 	}
 }
 
