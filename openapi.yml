@@ -881,36 +881,75 @@ components:
         - code
 
     GetTokensRequest:
+      description: Request to obtain tokens.
+      oneOf:
+        - $ref: '#/components/schemas/GetTokensByCodeRequest'
+        - $ref: '#/components/schemas/GetTokensByRefreshTokenRequest'
+        - $ref: '#/components/schemas/GetTokensByGoogleTokenRequest'
+        - $ref: '#/components/schemas/GetTokensByAppleTokenRequest'
+      discriminator:
+        propertyName: grant_type
+
+    GetTokensByCodeRequest:
       type: object
-      description: |
-        Request to obtain tokens.
-        - For `grant_type` = `code`, `email` and `code` are required.
-        - For `grant_type` = `refresh_token`, `refresh_token` is required.
-        - For `grant_type` = `google_token`, `google_token` is required.
-        - For `grant_type` = `apple_token`, `apple_token` is required.
       properties:
         grant_type:
           type: string
           description: Grant type to use.
-          enum: [code, refresh_token, google_token, apple_token]
+          enum: [code]
         email:
           type: string
           format: email
-          description: User email, required with `grant_type` = `code`.
+          description: User email.
         code:
           type: string
-          description: Verification code, required with `grant_type` = `code`.
+          description: Verification code received by email.
+      required:
+        - grant_type
+        - email
+        - code
+
+    GetTokensByRefreshTokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          description: Grant type to use.
+          enum: [refresh_token]
         refresh_token:
           type: string
-          description: Refresh token, required with `grant_type` = `refresh_token`.
+          description: Refresh token.
+      required:
+        - grant_type
+        - refresh_token
+
+    GetTokensByGoogleTokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          description: Grant type to use.
+          enum: [google_token]
         google_token:
           type: string
           description: Reserved for future Google auth integration.
+      required:
+        - grant_type
+        - google_token
+
+    GetTokensByAppleTokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          description: Grant type to use.
+          enum: [apple_token]
         apple_token:
           type: string
           description: Reserved for future Apple auth integration.
       required:
         - grant_type
+        - apple_token
 
     User:
       type: object

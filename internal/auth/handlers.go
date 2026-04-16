@@ -122,17 +122,25 @@ func HandleGenerateTokens(
 	}
 
 	body := req.Body
+	discriminator, err := body.Discriminator()
+	if err != nil {
+		return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+	}
 
-	switch body.GrantType {
-	case openapi.Code:
-		if body.Email == nil || *body.Email == "" {
+	switch discriminator {
+	case string(openapi.Code):
+		codeReq, err := body.AsGetTokensByCodeRequest()
+		if err != nil {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+		}
+		if string(codeReq.Email) == "" {
 			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "email is required"}), nil
 		}
-		if body.Code == nil || *body.Code == "" {
+		if codeReq.Code == "" {
 			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "verification code is required"}), nil
 		}
 
-		tokens, err := service.GetTokensWithVerificationCode(ctx, string(*body.Email), *body.Code)
+		tokens, err := service.GetTokensWithVerificationCode(ctx, string(codeReq.Email), codeReq.Code)
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrInvalidVerificationCode):
@@ -141,7 +149,7 @@ func HandleGenerateTokens(
 				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "verification code expired"}), nil
 			default:
 				reqLogger.Error("failed to get tokens with verification code",
-					slog.String("email", string(*body.Email)),
+					slog.String("email", string(codeReq.Email)),
 					slog.String("error", err.Error()),
 				)
 				return openapi.GenerateTokens500JSONResponse(openapi.Error{Error: "failed to get tokens"}), nil
@@ -153,12 +161,16 @@ func HandleGenerateTokens(
 			RefreshToken: tokens.RefreshToken,
 		}), nil
 
-	case openapi.RefreshToken:
-		if body.RefreshToken == nil || *body.RefreshToken == "" {
+	case string(openapi.RefreshToken):
+		refreshReq, err := body.AsGetTokensByRefreshTokenRequest()
+		if err != nil {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+		}
+		if refreshReq.RefreshToken == "" {
 			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "refresh_token is required"}), nil
 		}
 
-		tokens, err := service.GetTokensWithRefreshToken(ctx, *body.RefreshToken)
+		tokens, err := service.GetTokensWithRefreshToken(ctx, refreshReq.RefreshToken)
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrInvalidRefreshToken):
@@ -177,18 +189,22 @@ func HandleGenerateTokens(
 			AccessToken:  tokens.AccessToken,
 			RefreshToken: tokens.RefreshToken,
 		}), nil
-	case openapi.GoogleToken:
-		if body.GoogleToken == nil || *body.GoogleToken == "" {
+	case string(openapi.GoogleToken):
+		googleReq, err := body.AsGetTokensByGoogleTokenRequest()
+		if err != nil {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+		}
+		if googleReq.GoogleToken == "" {
 			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "google_token is required"}), nil
 		}
 
-		tokens, err := service.GetTokensWithGoogleIDToken(ctx, *body.GoogleToken)
+		tokens, err := service.GetTokensWithGoogleIDToken(ctx, googleReq.GoogleToken)
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrInvalidGoogleIDToken):
 				reqLogger.Error("invalid Google ID token",
 					slog.String("error", err.Error()),
-					slog.String("token", *body.GoogleToken),
+					slog.String("token", googleReq.GoogleToken),
 				)
 				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid google token"}), nil
 			default:
@@ -203,18 +219,22 @@ func HandleGenerateTokens(
 			AccessToken:  tokens.AccessToken,
 			RefreshToken: tokens.RefreshToken,
 		}), nil
-	case openapi.AppleToken:
-		if body.AppleToken == nil || *body.AppleToken == "" {
+	case string(openapi.AppleToken):
+		appleReq, err := body.AsGetTokensByAppleTokenRequest()
+		if err != nil {
+			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+		}
+		if appleReq.AppleToken == "" {
 			return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "apple_token is required"}), nil
 		}
 
-		tokens, err := service.GetTokensWithAppleIDToken(ctx, *body.AppleToken)
+		tokens, err := service.GetTokensWithAppleIDToken(ctx, appleReq.AppleToken)
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrInvalidAppleIDToken):
 				reqLogger.Error("invalid Apple ID token",
 					slog.String("error", err.Error()),
-					slog.String("token", *body.AppleToken),
+					slog.String("token", appleReq.AppleToken),
 				)
 				return openapi.GenerateTokens400JSONResponse(openapi.Error{Error: "invalid apple token"}), nil
 			default:

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"testing"
@@ -226,38 +227,38 @@ func TestHandleGenerateTokens_ValidationErrors(t *testing.T) {
 		{
 			name: "unsupported grant type",
 			req: openapi.GenerateTokensRequestObject{
-				Body: &openapi.GenerateTokensJSONRequestBody{
-					GrantType: openapi.GetTokensRequestGrantType("unknown"),
-				},
+				Body: rawGenerateTokensBody(t, map[string]string{
+					"grant_type": "unknown",
+				}),
 			},
 			wantError: "unsupported grant_type",
 		},
 		{
 			name: "code grant missing email",
 			req: openapi.GenerateTokensRequestObject{
-				Body: &openapi.GenerateTokensJSONRequestBody{
-					GrantType: openapi.Code,
-					Code:      ptr("1234"),
-				},
+				Body: rawGenerateTokensBody(t, map[string]string{
+					"grant_type": string(openapi.Code),
+					"code":       "1234",
+				}),
 			},
 			wantError: "email is required",
 		},
 		{
 			name: "code grant missing code",
 			req: openapi.GenerateTokensRequestObject{
-				Body: &openapi.GenerateTokensJSONRequestBody{
-					GrantType: openapi.Code,
-					Email:     ptrEmail("user@example.com"),
-				},
+				Body: rawGenerateTokensBody(t, map[string]string{
+					"grant_type": string(openapi.Code),
+					"email":      "user@example.com",
+				}),
 			},
 			wantError: "verification code is required",
 		},
 		{
 			name: "refresh grant missing token",
 			req: openapi.GenerateTokensRequestObject{
-				Body: &openapi.GenerateTokensJSONRequestBody{
-					GrantType: openapi.RefreshToken,
-				},
+				Body: rawGenerateTokensBody(t, map[string]string{
+					"grant_type": string(openapi.RefreshToken),
+				}),
 			},
 			wantError: "refresh_token is required",
 		},
@@ -300,13 +301,13 @@ func TestHandleGenerateTokens_CodeGrant_Success(t *testing.T) {
 	}
 	codeRepo.codesByEmail[email] = []*VerificationCode{code}
 
-	body := openapi.GenerateTokensJSONRequestBody{
+	body := mustGenerateTokensByCodeBody(t, openapi.GetTokensByCodeRequest{
 		GrantType: openapi.Code,
-		Email:     ptrEmail(email),
-		Code:      ptr("abcd"),
-	}
+		Email:     openapi_types.Email(email),
+		Code:      "abcd",
+	})
 	req := openapi.GenerateTokensRequestObject{
-		Body: &body,
+		Body: body,
 	}
 
 	resp, err := HandleGenerateTokens(ctx, svc, logger, req)
@@ -338,12 +339,12 @@ func TestHandleGenerateTokens_RefreshGrant_Success(t *testing.T) {
 	}
 	refreshRepo.tokens[existing.Token] = existing
 
-	body := openapi.GenerateTokensJSONRequestBody{
+	body := mustGenerateTokensByRefreshTokenBody(t, openapi.GetTokensByRefreshTokenRequest{
 		GrantType:    openapi.RefreshToken,
-		RefreshToken: ptr("refresh-token"),
-	}
+		RefreshToken: "refresh-token",
+	})
 	req := openapi.GenerateTokensRequestObject{
-		Body: &body,
+		Body: body,
 	}
 
 	resp, err := HandleGenerateTokens(ctx, svc, logger, req)
@@ -422,4 +423,42 @@ func ptr(s string) *string {
 func ptrEmail(s string) *openapi_types.Email {
 	e := openapi_types.Email(s)
 	return &e
+}
+
+func mustGenerateTokensByCodeBody(t *testing.T, req openapi.GetTokensByCodeRequest) *openapi.GenerateTokensJSONRequestBody {
+	t.Helper()
+
+	var body openapi.GenerateTokensJSONRequestBody
+	if err := body.FromGetTokensByCodeRequest(req); err != nil {
+		t.Fatalf("failed to build code grant body: %v", err)
+	}
+
+	return &body
+}
+
+func mustGenerateTokensByRefreshTokenBody(t *testing.T, req openapi.GetTokensByRefreshTokenRequest) *openapi.GenerateTokensJSONRequestBody {
+	t.Helper()
+
+	var body openapi.GenerateTokensJSONRequestBody
+	if err := body.FromGetTokensByRefreshTokenRequest(req); err != nil {
+		t.Fatalf("failed to build refresh token grant body: %v", err)
+	}
+
+	return &body
+}
+
+func rawGenerateTokensBody(t *testing.T, payload any) *openapi.GenerateTokensJSONRequestBody {
+	t.Helper()
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("failed to marshal raw grant body: %v", err)
+	}
+
+	var body openapi.GenerateTokensJSONRequestBody
+	if err := body.UnmarshalJSON(data); err != nil {
+		t.Fatalf("failed to unmarshal raw grant body: %v", err)
+	}
+
+	return &body
 }

@@ -8,6 +8,7 @@ package openapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,23 +23,59 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
-// Defines values for GetTokensRequestGrantType.
+// Defines values for GetTokensByAppleTokenRequestGrantType.
 const (
-	AppleToken   GetTokensRequestGrantType = "apple_token"
-	Code         GetTokensRequestGrantType = "code"
-	GoogleToken  GetTokensRequestGrantType = "google_token"
-	RefreshToken GetTokensRequestGrantType = "refresh_token"
+	AppleToken GetTokensByAppleTokenRequestGrantType = "apple_token"
 )
 
-// Valid indicates whether the value is a known member of the GetTokensRequestGrantType enum.
-func (e GetTokensRequestGrantType) Valid() bool {
+// Valid indicates whether the value is a known member of the GetTokensByAppleTokenRequestGrantType enum.
+func (e GetTokensByAppleTokenRequestGrantType) Valid() bool {
 	switch e {
 	case AppleToken:
 		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetTokensByCodeRequestGrantType.
+const (
+	Code GetTokensByCodeRequestGrantType = "code"
+)
+
+// Valid indicates whether the value is a known member of the GetTokensByCodeRequestGrantType enum.
+func (e GetTokensByCodeRequestGrantType) Valid() bool {
+	switch e {
 	case Code:
 		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetTokensByGoogleTokenRequestGrantType.
+const (
+	GoogleToken GetTokensByGoogleTokenRequestGrantType = "google_token"
+)
+
+// Valid indicates whether the value is a known member of the GetTokensByGoogleTokenRequestGrantType enum.
+func (e GetTokensByGoogleTokenRequestGrantType) Valid() bool {
+	switch e {
 	case GoogleToken:
 		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetTokensByRefreshTokenRequestGrantType.
+const (
+	RefreshToken GetTokensByRefreshTokenRequestGrantType = "refresh_token"
+)
+
+// Valid indicates whether the value is a known member of the GetTokensByRefreshTokenRequestGrantType enum.
+func (e GetTokensByRefreshTokenRequestGrantType) Valid() bool {
+	switch e {
 	case RefreshToken:
 		return true
 	default:
@@ -190,33 +227,61 @@ type FollowArtistRequest struct {
 	ArtistId openapi_types.UUID `json:"artist_id"`
 }
 
-// GetTokensRequest Request to obtain tokens.
-// - For `grant_type` = `code`, `email` and `code` are required.
-// - For `grant_type` = `refresh_token`, `refresh_token` is required.
-// - For `grant_type` = `google_token`, `google_token` is required.
-// - For `grant_type` = `apple_token`, `apple_token` is required.
-type GetTokensRequest struct {
+// GetTokensByAppleTokenRequest defines model for GetTokensByAppleTokenRequest.
+type GetTokensByAppleTokenRequest struct {
 	// AppleToken Reserved for future Apple auth integration.
-	AppleToken *string `json:"apple_token,omitempty"`
-
-	// Code Verification code, required with `grant_type` = `code`.
-	Code *string `json:"code,omitempty"`
-
-	// Email User email, required with `grant_type` = `code`.
-	Email *openapi_types.Email `json:"email,omitempty"`
-
-	// GoogleToken Reserved for future Google auth integration.
-	GoogleToken *string `json:"google_token,omitempty"`
+	AppleToken string `json:"apple_token"`
 
 	// GrantType Grant type to use.
-	GrantType GetTokensRequestGrantType `json:"grant_type"`
-
-	// RefreshToken Refresh token, required with `grant_type` = `refresh_token`.
-	RefreshToken *string `json:"refresh_token,omitempty"`
+	GrantType GetTokensByAppleTokenRequestGrantType `json:"grant_type"`
 }
 
-// GetTokensRequestGrantType Grant type to use.
-type GetTokensRequestGrantType string
+// GetTokensByAppleTokenRequestGrantType Grant type to use.
+type GetTokensByAppleTokenRequestGrantType string
+
+// GetTokensByCodeRequest defines model for GetTokensByCodeRequest.
+type GetTokensByCodeRequest struct {
+	// Code Verification code received by email.
+	Code string `json:"code"`
+
+	// Email User email.
+	Email openapi_types.Email `json:"email"`
+
+	// GrantType Grant type to use.
+	GrantType GetTokensByCodeRequestGrantType `json:"grant_type"`
+}
+
+// GetTokensByCodeRequestGrantType Grant type to use.
+type GetTokensByCodeRequestGrantType string
+
+// GetTokensByGoogleTokenRequest defines model for GetTokensByGoogleTokenRequest.
+type GetTokensByGoogleTokenRequest struct {
+	// GoogleToken Reserved for future Google auth integration.
+	GoogleToken string `json:"google_token"`
+
+	// GrantType Grant type to use.
+	GrantType GetTokensByGoogleTokenRequestGrantType `json:"grant_type"`
+}
+
+// GetTokensByGoogleTokenRequestGrantType Grant type to use.
+type GetTokensByGoogleTokenRequestGrantType string
+
+// GetTokensByRefreshTokenRequest defines model for GetTokensByRefreshTokenRequest.
+type GetTokensByRefreshTokenRequest struct {
+	// GrantType Grant type to use.
+	GrantType GetTokensByRefreshTokenRequestGrantType `json:"grant_type"`
+
+	// RefreshToken Refresh token.
+	RefreshToken string `json:"refresh_token"`
+}
+
+// GetTokensByRefreshTokenRequestGrantType Grant type to use.
+type GetTokensByRefreshTokenRequestGrantType string
+
+// GetTokensRequest Request to obtain tokens.
+type GetTokensRequest struct {
+	union json.RawMessage
+}
 
 // HomeScreenLayout defines model for HomeScreenLayout.
 type HomeScreenLayout struct {
@@ -397,6 +462,155 @@ type CreateUserJSONRequestBody = CreateUserRequest
 
 // SendVerificationEmailJSONRequestBody defines body for SendVerificationEmail for application/json ContentType.
 type SendVerificationEmailJSONRequestBody = SendVerificationEmailRequest
+
+// AsGetTokensByCodeRequest returns the union data inside the GetTokensRequest as a GetTokensByCodeRequest
+func (t GetTokensRequest) AsGetTokensByCodeRequest() (GetTokensByCodeRequest, error) {
+	var body GetTokensByCodeRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetTokensByCodeRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByCodeRequest
+func (t *GetTokensRequest) FromGetTokensByCodeRequest(v GetTokensByCodeRequest) error {
+	v.GrantType = "GetTokensByCodeRequest"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetTokensByCodeRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByCodeRequest
+func (t *GetTokensRequest) MergeGetTokensByCodeRequest(v GetTokensByCodeRequest) error {
+	v.GrantType = "GetTokensByCodeRequest"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetTokensByRefreshTokenRequest returns the union data inside the GetTokensRequest as a GetTokensByRefreshTokenRequest
+func (t GetTokensRequest) AsGetTokensByRefreshTokenRequest() (GetTokensByRefreshTokenRequest, error) {
+	var body GetTokensByRefreshTokenRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetTokensByRefreshTokenRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByRefreshTokenRequest
+func (t *GetTokensRequest) FromGetTokensByRefreshTokenRequest(v GetTokensByRefreshTokenRequest) error {
+	v.GrantType = "GetTokensByRefreshTokenRequest"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetTokensByRefreshTokenRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByRefreshTokenRequest
+func (t *GetTokensRequest) MergeGetTokensByRefreshTokenRequest(v GetTokensByRefreshTokenRequest) error {
+	v.GrantType = "GetTokensByRefreshTokenRequest"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetTokensByGoogleTokenRequest returns the union data inside the GetTokensRequest as a GetTokensByGoogleTokenRequest
+func (t GetTokensRequest) AsGetTokensByGoogleTokenRequest() (GetTokensByGoogleTokenRequest, error) {
+	var body GetTokensByGoogleTokenRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetTokensByGoogleTokenRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByGoogleTokenRequest
+func (t *GetTokensRequest) FromGetTokensByGoogleTokenRequest(v GetTokensByGoogleTokenRequest) error {
+	v.GrantType = "GetTokensByGoogleTokenRequest"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetTokensByGoogleTokenRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByGoogleTokenRequest
+func (t *GetTokensRequest) MergeGetTokensByGoogleTokenRequest(v GetTokensByGoogleTokenRequest) error {
+	v.GrantType = "GetTokensByGoogleTokenRequest"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetTokensByAppleTokenRequest returns the union data inside the GetTokensRequest as a GetTokensByAppleTokenRequest
+func (t GetTokensRequest) AsGetTokensByAppleTokenRequest() (GetTokensByAppleTokenRequest, error) {
+	var body GetTokensByAppleTokenRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetTokensByAppleTokenRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByAppleTokenRequest
+func (t *GetTokensRequest) FromGetTokensByAppleTokenRequest(v GetTokensByAppleTokenRequest) error {
+	v.GrantType = "GetTokensByAppleTokenRequest"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetTokensByAppleTokenRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByAppleTokenRequest
+func (t *GetTokensRequest) MergeGetTokensByAppleTokenRequest(v GetTokensByAppleTokenRequest) error {
+	v.GrantType = "GetTokensByAppleTokenRequest"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetTokensRequest) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"grant_type"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t GetTokensRequest) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "GetTokensByAppleTokenRequest":
+		return t.AsGetTokensByAppleTokenRequest()
+	case "GetTokensByCodeRequest":
+		return t.AsGetTokensByCodeRequest()
+	case "GetTokensByGoogleTokenRequest":
+		return t.AsGetTokensByGoogleTokenRequest()
+	case "GetTokensByRefreshTokenRequest":
+		return t.AsGetTokensByRefreshTokenRequest()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t GetTokensRequest) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetTokensRequest) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
