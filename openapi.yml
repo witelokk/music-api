@@ -889,6 +889,11 @@ components:
         - $ref: '#/components/schemas/GetTokensByAppleTokenRequest'
       discriminator:
         propertyName: grant_type
+        mapping:
+          code: '#/components/schemas/GetTokensByCodeRequest'
+          refresh_token: '#/components/schemas/GetTokensByRefreshTokenRequest'
+          google_token: '#/components/schemas/GetTokensByGoogleTokenRequest'
+          apple_token: '#/components/schemas/GetTokensByAppleTokenRequest'
 
     GetTokensByCodeRequest:
       type: object
@@ -1015,7 +1020,7 @@ components:
         popularSongs:
           $ref: '#/components/schemas/SongList'
         releases:
-          $ref: '#/components/schemas/ReleaseList'
+          $ref: '#/components/schemas/ReleaseSummaryList'
       required:
         - id
         - name

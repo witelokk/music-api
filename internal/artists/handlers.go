@@ -66,22 +66,13 @@ func HandleGetArtist(
 		popularSongs = append(popularSongs, song)
 	}
 
-	releases := make([]openapi.Release, 0, len(artist.Releases))
+	releases := make([]openapi.ReleaseSummary, 0, len(artist.Releases))
 	for _, r := range artist.Releases {
-		rel := openapi.Release{
+		rel := openapi.ReleaseSummary{
 			Id:         uuid.MustParse(r.ID),
 			Name:       r.Name,
 			Type:       releasesapi.MapReleaseType(r.Type),
 			ReleasedAt: r.ReleaseAt.Format("2006-01-02"),
-			Songs: openapi.SongList{
-				Count: 0,
-				Songs: []openapi.Song{},
-			},
-			Artists: openapi.ArtistList{
-				Count:   1,
-				Artists: []openapi.ArtistSummary{mainArtistSummary},
-				Names:   artist.Name,
-			},
 		}
 		if r.CoverMediaID != nil && *r.CoverMediaID != "" {
 			coverURL := mediaurl.Build(*r.CoverMediaID)
@@ -99,7 +90,7 @@ func HandleGetArtist(
 			Count: len(popularSongs),
 			Songs: popularSongs,
 		},
-		Releases: openapi.ReleaseList{
+		Releases: openapi.ReleaseSummaryList{
 			Count:    len(releases),
 			Releases: releases,
 		},

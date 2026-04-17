@@ -166,7 +166,7 @@ type Artist struct {
 	Id           openapi_types.UUID `json:"id"`
 	Name         string             `json:"name"`
 	PopularSongs SongList           `json:"popularSongs"`
-	Releases     ReleaseList        `json:"releases"`
+	Releases     ReleaseSummaryList `json:"releases"`
 }
 
 // ArtistList defines model for ArtistList.
@@ -330,12 +330,6 @@ type Release struct {
 	Type       ReleaseType        `json:"type"`
 }
 
-// ReleaseList defines model for ReleaseList.
-type ReleaseList struct {
-	Count    int       `json:"count"`
-	Releases []Release `json:"releases"`
-}
-
 // ReleaseSummary defines model for ReleaseSummary.
 type ReleaseSummary struct {
 	CoverUrl   *string            `json:"cover_url,omitempty"`
@@ -477,7 +471,7 @@ func (t GetTokensRequest) AsGetTokensByCodeRequest() (GetTokensByCodeRequest, er
 
 // FromGetTokensByCodeRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByCodeRequest
 func (t *GetTokensRequest) FromGetTokensByCodeRequest(v GetTokensByCodeRequest) error {
-	v.GrantType = "GetTokensByCodeRequest"
+	v.GrantType = "code"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
@@ -485,7 +479,7 @@ func (t *GetTokensRequest) FromGetTokensByCodeRequest(v GetTokensByCodeRequest) 
 
 // MergeGetTokensByCodeRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByCodeRequest
 func (t *GetTokensRequest) MergeGetTokensByCodeRequest(v GetTokensByCodeRequest) error {
-	v.GrantType = "GetTokensByCodeRequest"
+	v.GrantType = "code"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -505,7 +499,7 @@ func (t GetTokensRequest) AsGetTokensByRefreshTokenRequest() (GetTokensByRefresh
 
 // FromGetTokensByRefreshTokenRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByRefreshTokenRequest
 func (t *GetTokensRequest) FromGetTokensByRefreshTokenRequest(v GetTokensByRefreshTokenRequest) error {
-	v.GrantType = "GetTokensByRefreshTokenRequest"
+	v.GrantType = "refresh_token"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
@@ -513,7 +507,7 @@ func (t *GetTokensRequest) FromGetTokensByRefreshTokenRequest(v GetTokensByRefre
 
 // MergeGetTokensByRefreshTokenRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByRefreshTokenRequest
 func (t *GetTokensRequest) MergeGetTokensByRefreshTokenRequest(v GetTokensByRefreshTokenRequest) error {
-	v.GrantType = "GetTokensByRefreshTokenRequest"
+	v.GrantType = "refresh_token"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -533,7 +527,7 @@ func (t GetTokensRequest) AsGetTokensByGoogleTokenRequest() (GetTokensByGoogleTo
 
 // FromGetTokensByGoogleTokenRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByGoogleTokenRequest
 func (t *GetTokensRequest) FromGetTokensByGoogleTokenRequest(v GetTokensByGoogleTokenRequest) error {
-	v.GrantType = "GetTokensByGoogleTokenRequest"
+	v.GrantType = "google_token"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
@@ -541,7 +535,7 @@ func (t *GetTokensRequest) FromGetTokensByGoogleTokenRequest(v GetTokensByGoogle
 
 // MergeGetTokensByGoogleTokenRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByGoogleTokenRequest
 func (t *GetTokensRequest) MergeGetTokensByGoogleTokenRequest(v GetTokensByGoogleTokenRequest) error {
-	v.GrantType = "GetTokensByGoogleTokenRequest"
+	v.GrantType = "google_token"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -561,7 +555,7 @@ func (t GetTokensRequest) AsGetTokensByAppleTokenRequest() (GetTokensByAppleToke
 
 // FromGetTokensByAppleTokenRequest overwrites any union data inside the GetTokensRequest as the provided GetTokensByAppleTokenRequest
 func (t *GetTokensRequest) FromGetTokensByAppleTokenRequest(v GetTokensByAppleTokenRequest) error {
-	v.GrantType = "GetTokensByAppleTokenRequest"
+	v.GrantType = "apple_token"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
@@ -569,7 +563,7 @@ func (t *GetTokensRequest) FromGetTokensByAppleTokenRequest(v GetTokensByAppleTo
 
 // MergeGetTokensByAppleTokenRequest performs a merge with any union data inside the GetTokensRequest, using the provided GetTokensByAppleTokenRequest
 func (t *GetTokensRequest) MergeGetTokensByAppleTokenRequest(v GetTokensByAppleTokenRequest) error {
-	v.GrantType = "GetTokensByAppleTokenRequest"
+	v.GrantType = "apple_token"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -594,13 +588,13 @@ func (t GetTokensRequest) ValueByDiscriminator() (interface{}, error) {
 		return nil, err
 	}
 	switch discriminator {
-	case "GetTokensByAppleTokenRequest":
+	case "apple_token":
 		return t.AsGetTokensByAppleTokenRequest()
-	case "GetTokensByCodeRequest":
+	case "code":
 		return t.AsGetTokensByCodeRequest()
-	case "GetTokensByGoogleTokenRequest":
+	case "google_token":
 		return t.AsGetTokensByGoogleTokenRequest()
-	case "GetTokensByRefreshTokenRequest":
+	case "refresh_token":
 		return t.AsGetTokensByRefreshTokenRequest()
 	default:
 		return nil, errors.New("unknown discriminator value: " + discriminator)
