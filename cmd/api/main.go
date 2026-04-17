@@ -17,6 +17,7 @@ import (
 	"github.com/witelokk/music-api/internal/followings"
 	"github.com/witelokk/music-api/internal/home"
 	"github.com/witelokk/music-api/internal/media"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	"github.com/witelokk/music-api/internal/playlists"
 	"github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/search"
@@ -25,6 +26,7 @@ import (
 
 func main() {
 	config := internal.MustLoadConfig()
+	mediaurl.SetBasePath(config.Media.BasePath)
 	logger := internal.NewLogger(config.Logger.Type, config.Logger.Level)
 
 	db, err := pgxpool.New(context.Background(), config.DatabaseURL)

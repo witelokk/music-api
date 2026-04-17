@@ -17,9 +17,9 @@ type PostgresFollowingsRepository struct {
 }
 
 type FollowedArtist struct {
-	ID        string
-	Name      string
-	AvatarURL *string
+	ID            string
+	Name          string
+	AvatarMediaID *string
 }
 
 func NewPostgresFollowingsRepository(pool *pgxpool.Pool) *PostgresFollowingsRepository {
@@ -49,7 +49,7 @@ func (r *PostgresFollowingsRepository) Unfollow(ctx context.Context, userID, art
 
 func (r *PostgresFollowingsRepository) GetFollowedArtists(ctx context.Context, userID string) ([]FollowedArtist, error) {
 	const query = `
-		SELECT a.id, a.name, a.avatar_url
+		SELECT a.id, a.name, a.avatar_media_id
 		FROM followings f
 		JOIN artists a ON a.id = f.artist_id
 		WHERE f.user_id = $1
@@ -64,17 +64,17 @@ func (r *PostgresFollowingsRepository) GetFollowedArtists(ctx context.Context, u
 	var result []FollowedArtist
 	for rows.Next() {
 		var (
-			id        string
-			name      string
-			avatarURL *string
+			id            string
+			name          string
+			avatarMediaID *string
 		)
-		if err := rows.Scan(&id, &name, &avatarURL); err != nil {
+		if err := rows.Scan(&id, &name, &avatarMediaID); err != nil {
 			return nil, err
 		}
 		result = append(result, FollowedArtist{
-			ID:        id,
-			Name:      name,
-			AvatarURL: avatarURL,
+			ID:            id,
+			Name:          name,
+			AvatarMediaID: avatarMediaID,
 		})
 	}
 

@@ -44,7 +44,7 @@ func TestHandleGetSong_Success(t *testing.T) {
 		ID:              id.String(),
 		Name:            "Test Song",
 		DurationSeconds: 120,
-		StreamURL:       "https://example.com/stream",
+		StreamMediaID:   "stream-id",
 	}
 
 	svc := &SongsService{repo: &fakeSongsRepo{song: song}}
@@ -64,6 +64,9 @@ func TestHandleGetSong_Success(t *testing.T) {
 	}
 	if okResp.Name != song.Name {
 		t.Fatalf("expected name %q, got %q", song.Name, okResp.Name)
+	}
+	if okResp.StreamUrl != "/media/stream-id" {
+		t.Fatalf("expected stream url %q, got %q", "/media/stream-id", okResp.StreamUrl)
 	}
 	if !okResp.IsFavorite {
 		t.Fatalf("expected IsFavorite to be true")

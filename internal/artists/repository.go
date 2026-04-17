@@ -25,8 +25,8 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	const artistQuery = `
 		SELECT a.id,
 		       a.name,
-		       a.avatar_url,
-		       a.cover_url,
+		       a.avatar_media_id,
+		       a.cover_media_id,
 		       (SELECT COUNT(*) FROM followings f WHERE f.artist_id = a.id) AS followers,
 		       EXISTS (
 		         SELECT 1
@@ -38,7 +38,7 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	`
 
 	const popularSongsQuery = `
-		SELECT s.id, s.name, s.cover_url, s.duration, s.stream_url
+		SELECT s.id, s.name, s.cover_media_id, s.duration, s.stream_media_id
 		FROM song_artists sa
 		JOIN songs s ON s.id = sa.song_id
 		WHERE sa.artist_id = $1
@@ -47,7 +47,7 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	`
 
 	const releasesQuery = `
-		SELECT DISTINCT r.id, r.name, r.cover_url, r.type, r.release_at
+		SELECT DISTINCT r.id, r.name, r.cover_media_id, r.type, r.release_at
 		FROM song_artists sa
 		JOIN release_songs rs ON rs.song_id = sa.song_id
 		JOIN releases r ON r.id = rs.release_id
@@ -56,11 +56,11 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	`
 
 	var (
-		name       string
-		avatarURL  *string
-		coverURL   *string
-		followers  int
-		isFollowed bool
+		name          string
+		avatarMediaID *string
+		coverMediaID  *string
+		followers     int
+		isFollowed    bool
 	)
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -71,7 +71,7 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 
 	if err := tx.
 		QueryRow(ctx, artistQuery, id, userID).
-		Scan(&id, &name, &avatarURL, &coverURL, &followers, &isFollowed); err != nil {
+		Scan(&id, &name, &avatarMediaID, &coverMediaID, &followers, &isFollowed); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, 0, false, ErrArtistNotFound
 		}
@@ -87,21 +87,21 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	var popular []PopularSong
 	for popRows.Next() {
 		var (
-			songID    string
-			songName  string
-			cover     *string
-			duration  int
-			streamURL string
+			songID        string
+			songName      string
+			coverMediaID  *string
+			duration      int
+			streamMediaID string
 		)
-		if err := popRows.Scan(&songID, &songName, &cover, &duration, &streamURL); err != nil {
+		if err := popRows.Scan(&songID, &songName, &coverMediaID, &duration, &streamMediaID); err != nil {
 			return nil, 0, false, err
 		}
 		popular = append(popular, PopularSong{
 			ID:              songID,
 			Name:            songName,
-			CoverURL:        cover,
+			CoverMediaID:    coverMediaID,
 			DurationSeconds: duration,
-			StreamURL:       streamURL,
+			StreamMediaID:   streamMediaID,
 		})
 	}
 	if err := popRows.Err(); err != nil {
@@ -117,21 +117,21 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	var rels []ArtistRelease
 	for relRows.Next() {
 		var (
-			releaseID   string
-			releaseName string
-			releaseCov  *string
-			releaseType int
-			releaseAt   time.Time
+			releaseID      string
+			releaseName    string
+			releaseCoverID *string
+			releaseType    int
+			releaseAt      time.Time
 		)
-		if err := relRows.Scan(&releaseID, &releaseName, &releaseCov, &releaseType, &releaseAt); err != nil {
+		if err := relRows.Scan(&releaseID, &releaseName, &releaseCoverID, &releaseType, &releaseAt); err != nil {
 			return nil, 0, false, err
 		}
 		rels = append(rels, ArtistRelease{
-			ID:        releaseID,
-			Name:      releaseName,
-			CoverURL:  releaseCov,
-			Type:      releaseType,
-			ReleaseAt: releaseAt,
+			ID:           releaseID,
+			Name:         releaseName,
+			CoverMediaID: releaseCoverID,
+			Type:         releaseType,
+			ReleaseAt:    releaseAt,
 		})
 	}
 	if err := relRows.Err(); err != nil {
@@ -143,11 +143,11 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	}
 
 	return &Artist{
-		ID:        id,
-		Name:      name,
-		AvatarURL: avatarURL,
-		CoverURL:  coverURL,
-		Popular:   popular,
-		Releases:  rels,
+		ID:            id,
+		Name:          name,
+		AvatarMediaID: avatarMediaID,
+		CoverMediaID:  coverMediaID,
+		Popular:       popular,
+		Releases:      rels,
 	}, followers, isFollowed, nil
 }

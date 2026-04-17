@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
@@ -42,8 +43,9 @@ func HandleGetSong(
 			Id:   uuid.MustParse(a.ID),
 			Name: a.Name,
 		}
-		if a.AvatarURL != nil {
-			summary.AvatarUrl = a.AvatarURL
+		if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+			avatarURL := mediaurl.Build(*a.AvatarMediaID)
+			summary.AvatarUrl = &avatarURL
 		}
 		artistSummaries = append(artistSummaries, summary)
 	}
@@ -52,12 +54,13 @@ func HandleGetSong(
 		Id:              uuid.MustParse(song.ID),
 		Name:            song.Name,
 		DurationSeconds: song.DurationSeconds,
-		StreamUrl:       song.StreamURL,
+		StreamUrl:       mediaurl.Build(song.StreamMediaID),
 		IsFavorite:      isFavorite,
 		Artists:         artistSummaries,
 	}
-	if song.CoverURL != nil {
-		resp.CoverUrl = song.CoverURL
+	if song.CoverMediaID != nil && *song.CoverMediaID != "" {
+		coverURL := mediaurl.Build(*song.CoverMediaID)
+		resp.CoverUrl = &coverURL
 	}
 
 	return openapi.GetSong200JSONResponse(resp), nil

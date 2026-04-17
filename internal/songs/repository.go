@@ -22,7 +22,7 @@ func NewPostgresSongsRepository(pool *pgxpool.Pool) *PostgresSongsRepository {
 
 func (r *PostgresSongsRepository) GetSongWithFavorite(ctx context.Context, id, userID string) (*Song, bool, error) {
 	const songQuery = `
-		SELECT s.id, s.name, s.cover_url, s.duration, s.stream_url,
+		SELECT s.id, s.name, s.cover_media_id, s.duration, s.stream_media_id,
 		       EXISTS (
 		         SELECT 1
 		         FROM favorites f
@@ -33,7 +33,7 @@ func (r *PostgresSongsRepository) GetSongWithFavorite(ctx context.Context, id, u
 	`
 
 	const artistsQuery = `
-		SELECT a.id, a.name, a.avatar_url
+		SELECT a.id, a.name, a.avatar_media_id
 		FROM song_artists sa
 		JOIN artists a ON a.id = sa.artist_id
 		WHERE sa.song_id = $1
@@ -41,11 +41,11 @@ func (r *PostgresSongsRepository) GetSongWithFavorite(ctx context.Context, id, u
 	`
 
 	var (
-		name       string
-		coverURL   *string
-		duration   int
-		streamURL  string
-		isFavorite bool
+		name          string
+		coverMediaID  *string
+		duration      int
+		streamMediaID string
+		isFavorite    bool
 	)
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -56,7 +56,7 @@ func (r *PostgresSongsRepository) GetSongWithFavorite(ctx context.Context, id, u
 
 	if err := tx.
 		QueryRow(ctx, songQuery, id, userID).
-		Scan(&id, &name, &coverURL, &duration, &streamURL, &isFavorite); err != nil {
+		Scan(&id, &name, &coverMediaID, &duration, &streamMediaID, &isFavorite); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, ErrSongNotFound
 		}
@@ -72,17 +72,17 @@ func (r *PostgresSongsRepository) GetSongWithFavorite(ctx context.Context, id, u
 	var artists []ArtistSummary
 	for rows.Next() {
 		var (
-			artistID   string
-			artistName string
-			avatarURL  *string
+			artistID      string
+			artistName    string
+			avatarMediaID *string
 		)
-		if err := rows.Scan(&artistID, &artistName, &avatarURL); err != nil {
+		if err := rows.Scan(&artistID, &artistName, &avatarMediaID); err != nil {
 			return nil, false, err
 		}
 		artists = append(artists, ArtistSummary{
-			ID:        artistID,
-			Name:      artistName,
-			AvatarURL: avatarURL,
+			ID:            artistID,
+			Name:          artistName,
+			AvatarMediaID: avatarMediaID,
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -96,9 +96,9 @@ func (r *PostgresSongsRepository) GetSongWithFavorite(ctx context.Context, id, u
 	return &Song{
 		ID:              id,
 		Name:            name,
-		CoverURL:        coverURL,
+		CoverMediaID:    coverMediaID,
 		DurationSeconds: duration,
-		StreamURL:       streamURL,
+		StreamMediaID:   streamMediaID,
 		Artists:         artists,
 	}, isFavorite, nil
 }

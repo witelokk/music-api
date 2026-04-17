@@ -8,6 +8,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	releasesapi "github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/requestctx"
@@ -79,50 +80,69 @@ func HandleSearch(
 				artists := make([]openapi.ArtistSummary, 0, len(item.Song.Artists))
 				for _, a := range item.Song.Artists {
 					artists = append(artists, openapi.ArtistSummary{
-						Id:        uuidMustParse(a.ID),
-						Name:      a.Name,
-						AvatarUrl: a.AvatarURL,
+						Id:   uuidMustParse(a.ID),
+						Name: a.Name,
 					})
+					if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+						avatarURL := mediaurl.Build(*a.AvatarMediaID)
+						artists[len(artists)-1].AvatarUrl = &avatarURL
+					}
 				}
-				apiItem.Song = &openapi.Song{
+				song := openapi.Song{
 					Id:              uuidMustParse(item.Song.ID),
 					Name:            item.Song.Name,
-					CoverUrl:        item.Song.CoverURL,
 					DurationSeconds: item.Song.DurationSeconds,
-					StreamUrl:       item.Song.StreamURL,
+					StreamUrl:       mediaurl.Build(item.Song.StreamMediaID),
 					IsFavorite:      item.Song.IsFavorite,
 					Artists:         artists,
 				}
+				if item.Song.CoverMediaID != nil && *item.Song.CoverMediaID != "" {
+					coverURL := mediaurl.Build(*item.Song.CoverMediaID)
+					song.CoverUrl = &coverURL
+				}
+				apiItem.Song = &song
 			}
 		case ResultTypeArtist:
 			apiItem.Type = openapi.SearchResultItemTypeArtist
 			if item.Artist != nil {
-				apiItem.Artist = &openapi.ArtistSummary{
-					Id:        uuidMustParse(item.Artist.ID),
-					Name:      item.Artist.Name,
-					AvatarUrl: item.Artist.AvatarURL,
+				artist := openapi.ArtistSummary{
+					Id:   uuidMustParse(item.Artist.ID),
+					Name: item.Artist.Name,
 				}
+				if item.Artist.AvatarMediaID != nil && *item.Artist.AvatarMediaID != "" {
+					avatarURL := mediaurl.Build(*item.Artist.AvatarMediaID)
+					artist.AvatarUrl = &avatarURL
+				}
+				apiItem.Artist = &artist
 			}
 		case ResultTypeRelease:
 			apiItem.Type = openapi.SearchResultItemTypeRelease
 			if item.Release != nil {
-				apiItem.Release = &openapi.ReleaseSummary{
+				release := openapi.ReleaseSummary{
 					Id:         uuidMustParse(item.Release.ID),
 					Name:       item.Release.Name,
-					CoverUrl:   item.Release.CoverURL,
 					Type:       releasesapi.MapReleaseType(item.Release.Type),
 					ReleasedAt: item.Release.ReleaseAt,
 				}
+				if item.Release.CoverMediaID != nil && *item.Release.CoverMediaID != "" {
+					coverURL := mediaurl.Build(*item.Release.CoverMediaID)
+					release.CoverUrl = &coverURL
+				}
+				apiItem.Release = &release
 			}
 		case ResultTypePlaylist:
 			apiItem.Type = openapi.SearchResultItemTypePlaylist
 			if item.Playlist != nil {
-				apiItem.Playlist = &openapi.PlaylistSummary{
+				playlist := openapi.PlaylistSummary{
 					Id:         uuidMustParse(item.Playlist.ID),
 					Name:       item.Playlist.Name,
-					CoverUrl:   item.Playlist.CoverURL,
 					SongsCount: item.Playlist.SongsCount,
 				}
+				if item.Playlist.CoverMediaID != nil && *item.Playlist.CoverMediaID != "" {
+					coverURL := mediaurl.Build(*item.Playlist.CoverMediaID)
+					playlist.CoverUrl = &coverURL
+				}
+				apiItem.Playlist = &playlist
 			}
 		default:
 			continue

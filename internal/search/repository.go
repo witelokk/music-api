@@ -26,9 +26,9 @@ func (r *PostgresSearchRepository) SearchSongs(ctx context.Context, query, userI
 	const q = `
 		SELECT s.id,
 		       s.name,
-		       s.cover_url,
+		       s.cover_media_id,
 		       s.duration,
-		       s.stream_url,
+		       s.stream_media_id,
 		       EXISTS (
 		         SELECT 1
 		         FROM favorites f
@@ -36,7 +36,7 @@ func (r *PostgresSearchRepository) SearchSongs(ctx context.Context, query, userI
 		       ) AS is_favorite,
 		       a.id AS artist_id,
 		       a.name AS artist_name,
-		       a.avatar_url
+		       a.avatar_media_id
 		FROM songs s
 		LEFT JOIN song_artists sa ON sa.song_id = s.id
 		LEFT JOIN artists a ON a.id = sa.artist_id
@@ -51,25 +51,25 @@ func (r *PostgresSearchRepository) SearchSongs(ctx context.Context, query, userI
 	defer rows.Close()
 
 	var (
-		results      []SongResult
-		currentID    string
-		currentSong  SongResult
+		results     []SongResult
+		currentID   string
+		currentSong SongResult
 	)
 
 	for rows.Next() {
 		var (
-			id           string
-			name         string
-			coverURL     *string
-			duration     int
-			streamURL    string
-			isFavorite   bool
-			artistID     *string
-			artistName   *string
-			artistAvatar *string
+			id            string
+			name          string
+			coverMediaID  *string
+			duration      int
+			streamMediaID string
+			isFavorite    bool
+			artistID      *string
+			artistName    *string
+			artistAvatar  *string
 		)
 
-		if err := rows.Scan(&id, &name, &coverURL, &duration, &streamURL, &isFavorite, &artistID, &artistName, &artistAvatar); err != nil {
+		if err := rows.Scan(&id, &name, &coverMediaID, &duration, &streamMediaID, &isFavorite, &artistID, &artistName, &artistAvatar); err != nil {
 			return nil, err
 		}
 
@@ -81,9 +81,9 @@ func (r *PostgresSearchRepository) SearchSongs(ctx context.Context, query, userI
 			currentSong = SongResult{
 				ID:              id,
 				Name:            name,
-				CoverURL:        coverURL,
+				CoverMediaID:    coverMediaID,
 				DurationSeconds: duration,
-				StreamURL:       streamURL,
+				StreamMediaID:   streamMediaID,
 				IsFavorite:      isFavorite,
 				Artists:         nil,
 			}
@@ -91,9 +91,9 @@ func (r *PostgresSearchRepository) SearchSongs(ctx context.Context, query, userI
 
 		if artistID != nil && artistName != nil {
 			currentSong.Artists = append(currentSong.Artists, ArtistSummary{
-				ID:        *artistID,
-				Name:      *artistName,
-				AvatarURL: artistAvatar,
+				ID:            *artistID,
+				Name:          *artistName,
+				AvatarMediaID: artistAvatar,
 			})
 		}
 	}
@@ -107,7 +107,7 @@ func (r *PostgresSearchRepository) SearchSongs(ctx context.Context, query, userI
 
 func (r *PostgresSearchRepository) SearchArtists(ctx context.Context, query string) ([]ArtistResult, error) {
 	const q = `
-		SELECT a.id, a.name, a.avatar_url
+		SELECT a.id, a.name, a.avatar_media_id
 		FROM artists a
 		WHERE a.name ILIKE '%' || $1 || '%'
 		ORDER BY a.name
@@ -122,17 +122,17 @@ func (r *PostgresSearchRepository) SearchArtists(ctx context.Context, query stri
 	var results []ArtistResult
 	for rows.Next() {
 		var (
-			id        string
-			name      string
-			avatarURL *string
+			id            string
+			name          string
+			avatarMediaID *string
 		)
-		if err := rows.Scan(&id, &name, &avatarURL); err != nil {
+		if err := rows.Scan(&id, &name, &avatarMediaID); err != nil {
 			return nil, err
 		}
 		results = append(results, ArtistResult{
-			ID:        id,
-			Name:      name,
-			AvatarURL: avatarURL,
+			ID:            id,
+			Name:          name,
+			AvatarMediaID: avatarMediaID,
 		})
 	}
 
@@ -141,7 +141,7 @@ func (r *PostgresSearchRepository) SearchArtists(ctx context.Context, query stri
 
 func (r *PostgresSearchRepository) SearchReleases(ctx context.Context, query string) ([]ReleaseResult, error) {
 	const q = `
-		SELECT r.id, r.name, r.cover_url, r.type, r.release_at
+		SELECT r.id, r.name, r.cover_media_id, r.type, r.release_at
 		FROM releases r
 		WHERE r.name ILIKE '%' || $1 || '%'
 		ORDER BY r.release_at DESC
@@ -156,21 +156,21 @@ func (r *PostgresSearchRepository) SearchReleases(ctx context.Context, query str
 	var results []ReleaseResult
 	for rows.Next() {
 		var (
-			id        string
-			name      string
-			coverURL  *string
-			relType   int
-			releaseAt time.Time
+			id           string
+			name         string
+			coverMediaID *string
+			relType      int
+			releaseAt    time.Time
 		)
-		if err := rows.Scan(&id, &name, &coverURL, &relType, &releaseAt); err != nil {
+		if err := rows.Scan(&id, &name, &coverMediaID, &relType, &releaseAt); err != nil {
 			return nil, err
 		}
 		results = append(results, ReleaseResult{
-			ID:        id,
-			Name:      name,
-			CoverURL:  coverURL,
-			Type:      relType,
-			ReleaseAt: releaseAt.Format("2006-01-02"),
+			ID:           id,
+			Name:         name,
+			CoverMediaID: coverMediaID,
+			Type:         relType,
+			ReleaseAt:    releaseAt.Format("2006-01-02"),
 		})
 	}
 
@@ -185,7 +185,7 @@ func (r *PostgresSearchRepository) SearchPlaylists(ctx context.Context, query, u
 	const q = `
 		SELECT p.id,
 		       p.name,
-		       MAX(s.cover_url) AS cover_url,
+		       MAX(s.cover_media_id) AS cover_media_id,
 		       COUNT(ps.song_id) AS songs_count
 		FROM playlists p
 		LEFT JOIN playlist_songs ps ON ps.playlist_id = p.id
@@ -205,19 +205,19 @@ func (r *PostgresSearchRepository) SearchPlaylists(ctx context.Context, query, u
 	var results []PlaylistResult
 	for rows.Next() {
 		var (
-			id         string
-			name       string
-			coverURL   *string
-			songsCount int
+			id           string
+			name         string
+			coverMediaID *string
+			songsCount   int
 		)
-		if err := rows.Scan(&id, &name, &coverURL, &songsCount); err != nil {
+		if err := rows.Scan(&id, &name, &coverMediaID, &songsCount); err != nil {
 			return nil, err
 		}
 		results = append(results, PlaylistResult{
-			ID:         id,
-			Name:       name,
-			CoverURL:   coverURL,
-			SongsCount: songsCount,
+			ID:           id,
+			Name:         name,
+			CoverMediaID: coverMediaID,
+			SongsCount:   songsCount,
 		})
 	}
 

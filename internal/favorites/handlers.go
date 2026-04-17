@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
@@ -40,8 +41,9 @@ func HandleGetFavorites(
 				Id:   uuid.MustParse(a.ID),
 				Name: a.Name,
 			}
-			if a.AvatarURL != nil {
-				summary.AvatarUrl = a.AvatarURL
+			if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+				avatarURL := mediaurl.Build(*a.AvatarMediaID)
+				summary.AvatarUrl = &avatarURL
 			}
 			artistSummaries = append(artistSummaries, summary)
 		}
@@ -50,12 +52,13 @@ func HandleGetFavorites(
 			Id:              uuid.MustParse(sng.ID),
 			Name:            sng.Name,
 			DurationSeconds: sng.DurationSeconds,
-			StreamUrl:       sng.StreamURL,
+			StreamUrl:       mediaurl.Build(sng.StreamMediaID),
 			IsFavorite:      true,
 			Artists:         artistSummaries,
 		}
-		if sng.CoverURL != nil {
-			respSong.CoverUrl = sng.CoverURL
+		if sng.CoverMediaID != nil && *sng.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*sng.CoverMediaID)
+			respSong.CoverUrl = &coverURL
 		}
 
 		songsList = append(songsList, respSong)

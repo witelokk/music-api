@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	releasesapi "github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/requestctx"
@@ -43,8 +44,9 @@ func HandleGetArtist(
 		Id:   artistID,
 		Name: artist.Name,
 	}
-	if artist.AvatarURL != nil {
-		mainArtistSummary.AvatarUrl = artist.AvatarURL
+	if artist.AvatarMediaID != nil && *artist.AvatarMediaID != "" {
+		avatarURL := mediaurl.Build(*artist.AvatarMediaID)
+		mainArtistSummary.AvatarUrl = &avatarURL
 	}
 
 	popularSongs := make([]openapi.Song, 0, len(artist.Popular))
@@ -53,12 +55,13 @@ func HandleGetArtist(
 			Id:              uuid.MustParse(s.ID),
 			Name:            s.Name,
 			DurationSeconds: s.DurationSeconds,
-			StreamUrl:       s.StreamURL,
+			StreamUrl:       mediaurl.Build(s.StreamMediaID),
 			IsFavorite:      false,
 			Artists:         []openapi.ArtistSummary{mainArtistSummary},
 		}
-		if s.CoverURL != nil {
-			song.CoverUrl = s.CoverURL
+		if s.CoverMediaID != nil && *s.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*s.CoverMediaID)
+			song.CoverUrl = &coverURL
 		}
 		popularSongs = append(popularSongs, song)
 	}
@@ -80,8 +83,9 @@ func HandleGetArtist(
 				Names:   artist.Name,
 			},
 		}
-		if r.CoverURL != nil {
-			rel.CoverUrl = r.CoverURL
+		if r.CoverMediaID != nil && *r.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*r.CoverMediaID)
+			rel.CoverUrl = &coverURL
 		}
 		releases = append(releases, rel)
 	}
@@ -101,11 +105,13 @@ func HandleGetArtist(
 		},
 	}
 
-	if artist.AvatarURL != nil {
-		resp.AvatarUrl = artist.AvatarURL
+	if artist.AvatarMediaID != nil && *artist.AvatarMediaID != "" {
+		avatarURL := mediaurl.Build(*artist.AvatarMediaID)
+		resp.AvatarUrl = &avatarURL
 	}
-	if artist.CoverURL != nil {
-		resp.CoverUrl = artist.CoverURL
+	if artist.CoverMediaID != nil && *artist.CoverMediaID != "" {
+		coverURL := mediaurl.Build(*artist.CoverMediaID)
+		resp.CoverUrl = &coverURL
 	}
 
 	return openapi.GetArtist200JSONResponse(resp), nil

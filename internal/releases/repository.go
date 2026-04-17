@@ -24,13 +24,13 @@ func NewPostgresReleasesRepository(pool *pgxpool.Pool) *PostgresReleasesReposito
 
 func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id string) (*Release, error) {
 	const releaseQuery = `
-		SELECT id, name, cover_url, type, release_at
+		SELECT id, name, cover_media_id, type, release_at
 		FROM releases
 		WHERE id = $1
 	`
 
 	const songsQuery = `
-		SELECT s.id, s.name, s.cover_url, s.duration, s.stream_url
+		SELECT s.id, s.name, s.cover_media_id, s.duration, s.stream_media_id
 		FROM release_songs rs
 		JOIN songs s ON s.id = rs.song_id
 		WHERE rs.release_id = $1
@@ -38,7 +38,7 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	`
 
 	const songArtistsQuery = `
-		SELECT rs.song_id, a.id, a.name, a.avatar_url
+		SELECT rs.song_id, a.id, a.name, a.avatar_media_id
 		FROM release_songs rs
 		JOIN song_artists sa ON sa.song_id = rs.song_id
 		JOIN artists a ON a.id = sa.artist_id
@@ -47,7 +47,7 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	`
 
 	const artistsQuery = `
-		SELECT DISTINCT a.id, a.name, a.avatar_url
+		SELECT DISTINCT a.id, a.name, a.avatar_media_id
 		FROM release_songs rs
 		JOIN song_artists sa ON sa.song_id = rs.song_id
 		JOIN artists a ON a.id = sa.artist_id
@@ -56,10 +56,10 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	`
 
 	var (
-		name      string
-		coverURL  *string
-		releaseAt time.Time
-		typ       int
+		name         string
+		coverMediaID *string
+		releaseAt    time.Time
+		typ          int
 	)
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -70,7 +70,7 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 
 	if err := tx.
 		QueryRow(ctx, releaseQuery, id).
-		Scan(&id, &name, &coverURL, &typ, &releaseAt); err != nil {
+		Scan(&id, &name, &coverMediaID, &typ, &releaseAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrReleaseNotFound
 		}
@@ -86,21 +86,21 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	var songs []ReleaseSong
 	for songRows.Next() {
 		var (
-			songID    string
-			songName  string
-			songCover *string
-			duration  int
-			streamURL string
+			songID        string
+			songName      string
+			songCoverID   *string
+			duration      int
+			streamMediaID string
 		)
-		if err := songRows.Scan(&songID, &songName, &songCover, &duration, &streamURL); err != nil {
+		if err := songRows.Scan(&songID, &songName, &songCoverID, &duration, &streamMediaID); err != nil {
 			return nil, err
 		}
 		songs = append(songs, ReleaseSong{
 			ID:              songID,
 			Name:            songName,
-			CoverURL:        songCover,
+			CoverMediaID:    songCoverID,
 			DurationSeconds: duration,
-			StreamURL:       streamURL,
+			StreamMediaID:   streamMediaID,
 		})
 	}
 	if err := songRows.Err(); err != nil {
@@ -116,18 +116,18 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	songArtists := make(map[string][]ReleaseArtist)
 	for artistRowsBySong.Next() {
 		var (
-			songID    string
-			artistID  string
-			name      string
-			avatarURL *string
+			songID        string
+			artistID      string
+			name          string
+			avatarMediaID *string
 		)
-		if err := artistRowsBySong.Scan(&songID, &artistID, &name, &avatarURL); err != nil {
+		if err := artistRowsBySong.Scan(&songID, &artistID, &name, &avatarMediaID); err != nil {
 			return nil, err
 		}
 		songArtists[songID] = append(songArtists[songID], ReleaseArtist{
-			ID:        artistID,
-			Name:      name,
-			AvatarURL: avatarURL,
+			ID:            artistID,
+			Name:          name,
+			AvatarMediaID: avatarMediaID,
 		})
 	}
 	if err := artistRowsBySong.Err(); err != nil {
@@ -149,17 +149,17 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	var artists []ReleaseArtist
 	for artistRows.Next() {
 		var (
-			artistID   string
-			artistName string
-			avatarURL  *string
+			artistID      string
+			artistName    string
+			avatarMediaID *string
 		)
-		if err := artistRows.Scan(&artistID, &artistName, &avatarURL); err != nil {
+		if err := artistRows.Scan(&artistID, &artistName, &avatarMediaID); err != nil {
 			return nil, err
 		}
 		artists = append(artists, ReleaseArtist{
-			ID:        artistID,
-			Name:      artistName,
-			AvatarURL: avatarURL,
+			ID:            artistID,
+			Name:          artistName,
+			AvatarMediaID: avatarMediaID,
 		})
 	}
 	if err := artistRows.Err(); err != nil {
@@ -171,13 +171,13 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	}
 
 	return &Release{
-		ID:        id,
-		Name:      name,
-		CoverURL:  coverURL,
-		Type:      typ,
-		ReleaseAt: releaseAt,
-		Songs:     songs,
-		Artists:   artists,
+		ID:           id,
+		Name:         name,
+		CoverMediaID: coverMediaID,
+		Type:         typ,
+		ReleaseAt:    releaseAt,
+		Songs:        songs,
+		Artists:      artists,
 	}, nil
 }
 
@@ -187,7 +187,7 @@ func (r *PostgresReleasesRepository) GetRandomReleases(ctx context.Context, seed
 	}
 
 	const query = `
-		SELECT r.id, r.name, r.cover_url, r.type, r.release_at
+		SELECT r.id, r.name, r.cover_media_id, r.type, r.release_at
 		FROM releases r
 		ORDER BY md5(r.id::text || $1)
 		LIMIT $2
@@ -202,23 +202,23 @@ func (r *PostgresReleasesRepository) GetRandomReleases(ctx context.Context, seed
 	var result []Release
 	for rows.Next() {
 		var (
-			id        string
-			name      string
-			coverURL  *string
-			typ       int
-			releaseAt time.Time
+			id           string
+			name         string
+			coverMediaID *string
+			typ          int
+			releaseAt    time.Time
 		)
-		if err := rows.Scan(&id, &name, &coverURL, &typ, &releaseAt); err != nil {
+		if err := rows.Scan(&id, &name, &coverMediaID, &typ, &releaseAt); err != nil {
 			return nil, err
 		}
 		result = append(result, Release{
-			ID:        id,
-			Name:      name,
-			CoverURL:  coverURL,
-			Type:      typ,
-			ReleaseAt: releaseAt,
-			Songs:     nil,
-			Artists:   nil,
+			ID:           id,
+			Name:         name,
+			CoverMediaID: coverMediaID,
+			Type:         typ,
+			ReleaseAt:    releaseAt,
+			Songs:        nil,
+			Artists:      nil,
 		})
 	}
 
@@ -236,7 +236,7 @@ func (r *PostgresReleasesRepository) GetRandomReleases(ctx context.Context, seed
 	}
 
 	const artistsQuery = `
-		SELECT rs.release_id, a.id, a.name, a.avatar_url
+		SELECT rs.release_id, a.id, a.name, a.avatar_media_id
 		FROM release_songs rs
 		JOIN song_artists sa ON sa.song_id = rs.song_id
 		JOIN artists a ON a.id = sa.artist_id
@@ -253,18 +253,18 @@ func (r *PostgresReleasesRepository) GetRandomReleases(ctx context.Context, seed
 	artistsByRelease := make(map[string][]ReleaseArtist)
 	for artistRows.Next() {
 		var (
-			releaseID string
-			artistID  string
-			name      string
-			avatarURL *string
+			releaseID     string
+			artistID      string
+			name          string
+			avatarMediaID *string
 		)
-		if err := artistRows.Scan(&releaseID, &artistID, &name, &avatarURL); err != nil {
+		if err := artistRows.Scan(&releaseID, &artistID, &name, &avatarMediaID); err != nil {
 			return nil, err
 		}
 		artistsByRelease[releaseID] = append(artistsByRelease[releaseID], ReleaseArtist{
-			ID:        artistID,
-			Name:      name,
-			AvatarURL: avatarURL,
+			ID:            artistID,
+			Name:          name,
+			AvatarMediaID: avatarMediaID,
 		})
 	}
 	if err := artistRows.Err(); err != nil {

@@ -47,6 +47,10 @@ type Config struct {
 		UseSSL    bool   `env:"MINIO_USE_SSL" yaml:"minio.use_ssl" env-default:"false"`
 	} `yaml:"minio"`
 
+	Media struct {
+		BasePath string `env:"MEDIA_BASE_PATH" yaml:"media.base_path" env-default:"/media"`
+	} `yaml:"media"`
+
 	Logger struct {
 		Type  string `yaml:"type" env:"LOGGER_TYPE" env-default:"text"`
 		Level string `yaml:"level" env:"LOGGER_LEVEL" env-default:"info"`

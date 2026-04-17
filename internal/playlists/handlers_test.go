@@ -127,7 +127,7 @@ func TestHandleGetPlaylist_Success(t *testing.T) {
 				ID:              songID.String(),
 				Name:            "Song",
 				DurationSeconds: 120,
-				StreamURL:       "stream",
+				StreamMediaID:   "stream-id",
 				IsFavorite:      true,
 				Artists: []PlaylistArtist{
 					{
@@ -160,6 +160,9 @@ func TestHandleGetPlaylist_Success(t *testing.T) {
 	if len(okResp.Songs.Songs) != 1 {
 		t.Fatalf("expected 1 song, got %d", len(okResp.Songs.Songs))
 	}
+	if okResp.Songs.Songs[0].StreamUrl != "/media/stream-id" {
+		t.Fatalf("expected stream url %q, got %q", "/media/stream-id", okResp.Songs.Songs[0].StreamUrl)
+	}
 	if len(okResp.Songs.Songs[0].Artists) != 1 {
 		t.Fatalf("expected 1 artist, got %d", len(okResp.Songs.Songs[0].Artists))
 	}
@@ -176,7 +179,7 @@ func TestHandleGetPlaylistSongs_Success(t *testing.T) {
 				ID:              songID.String(),
 				Name:            "Song",
 				DurationSeconds: 120,
-				StreamURL:       "stream",
+				StreamMediaID:   "stream-id",
 				IsFavorite:      true,
 			},
 		},
@@ -199,6 +202,9 @@ func TestHandleGetPlaylistSongs_Success(t *testing.T) {
 	}
 	if okResp.Count != 1 || len(okResp.Songs) != 1 {
 		t.Fatalf("expected 1 song, got count=%d songs=%d", okResp.Count, len(okResp.Songs))
+	}
+	if okResp.Songs[0].StreamUrl != "/media/stream-id" {
+		t.Fatalf("expected stream url %q, got %q", "/media/stream-id", okResp.Songs[0].StreamUrl)
 	}
 }
 
@@ -235,4 +241,3 @@ func TestHandleRemoveSongFromPlaylist_BadBody(t *testing.T) {
 		t.Fatalf("expected 400 response, got %T", resp)
 	}
 }
-

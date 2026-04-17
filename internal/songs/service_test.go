@@ -23,7 +23,7 @@ func TestService_GetSongWithFavorite_Success(t *testing.T) {
 		ID:              "song-id",
 		Name:            "Test Song",
 		DurationSeconds: 180,
-		StreamURL:       "https://example.com/stream",
+		StreamMediaID:   "stream-id",
 	}
 
 	repo := &fakeSongsRepo{song: want}

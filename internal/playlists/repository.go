@@ -78,7 +78,7 @@ func (r *PostgresPlaylistsRepository) GetPlaylists(ctx context.Context, userID s
 	const query = `
 		SELECT p.id,
 		       p.name,
-		       MAX(s.cover_url) AS cover_url,
+		       MAX(s.cover_media_id) AS cover_media_id,
 		       COUNT(ps.song_id) AS songs_count,
 		       p.created_at
 		FROM playlists p
@@ -98,20 +98,20 @@ func (r *PostgresPlaylistsRepository) GetPlaylists(ctx context.Context, userID s
 	var result []PlaylistSummary
 	for rows.Next() {
 		var (
-			id         string
-			name       string
-			coverURL   *string
-			songsCount int
-			createdAt  time.Time
+			id           string
+			name         string
+			coverMediaID *string
+			songsCount   int
+			createdAt    time.Time
 		)
-		if err := rows.Scan(&id, &name, &coverURL, &songsCount, &createdAt); err != nil {
+		if err := rows.Scan(&id, &name, &coverMediaID, &songsCount, &createdAt); err != nil {
 			return nil, err
 		}
 		result = append(result, PlaylistSummary{
-			ID:         id,
-			Name:       name,
-			CoverURL:   coverURL,
-			SongsCount: songsCount,
+			ID:           id,
+			Name:         name,
+			CoverMediaID: coverMediaID,
+			SongsCount:   songsCount,
 		})
 	}
 
@@ -124,7 +124,7 @@ func (r *PostgresPlaylistsRepository) GetPlaylist(ctx context.Context, userID, p
 		       p.user_id,
 		       p.name,
 		       p.created_at,
-		       MAX(s.cover_url) AS cover_url,
+		       MAX(s.cover_media_id) AS cover_media_id,
 		       COUNT(ps.song_id) AS songs_count
 		FROM playlists p
 		LEFT JOIN playlist_songs ps ON ps.playlist_id = p.id
@@ -134,16 +134,16 @@ func (r *PostgresPlaylistsRepository) GetPlaylist(ctx context.Context, userID, p
 	`
 
 	var (
-		id         string
-		ownerID    string
-		name       string
-		createdAt  time.Time
-		coverURL   *string
-		songsCount int
+		id           string
+		ownerID      string
+		name         string
+		createdAt    time.Time
+		coverMediaID *string
+		songsCount   int
 	)
 
 	if err := r.pool.QueryRow(ctx, query, playlistID, userID).
-		Scan(&id, &ownerID, &name, &createdAt, &coverURL, &songsCount); err != nil {
+		Scan(&id, &ownerID, &name, &createdAt, &coverMediaID, &songsCount); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, err
 		}
@@ -151,12 +151,12 @@ func (r *PostgresPlaylistsRepository) GetPlaylist(ctx context.Context, userID, p
 	}
 
 	return &Playlist{
-		ID:         id,
-		UserID:     ownerID,
-		Name:       name,
-		CreatedAt:  createdAt,
-		CoverURL:   coverURL,
-		SongsCount: songsCount,
+		ID:           id,
+		UserID:       ownerID,
+		Name:         name,
+		CreatedAt:    createdAt,
+		CoverMediaID: coverMediaID,
+		SongsCount:   songsCount,
 	}, nil
 }
 
@@ -164,9 +164,9 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 	const query = `
 		SELECT s.id,
 		       s.name,
-		       s.cover_url,
+		       s.cover_media_id,
 		       s.duration,
-		       s.stream_url,
+		       s.stream_media_id,
 		       EXISTS (
 		         SELECT 1
 		         FROM favorites f
@@ -174,7 +174,7 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 		       ) AS is_favorite,
 		       a.id AS artist_id,
 		       a.name AS artist_name,
-		       a.avatar_url
+		       a.avatar_media_id
 		FROM playlist_songs ps
 		JOIN playlists p ON p.id = ps.playlist_id
 		JOIN songs s ON s.id = ps.song_id
@@ -198,17 +198,17 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 
 	for rows.Next() {
 		var (
-			id           string
-			name         string
-			coverURL     *string
-			duration     int
-			streamURL    string
-			isFavorite   bool
-			artistID     *string
-			artistName   *string
-			artistAvatar *string
+			id            string
+			name          string
+			coverMediaID  *string
+			duration      int
+			streamMediaID string
+			isFavorite    bool
+			artistID      *string
+			artistName    *string
+			artistAvatar  *string
 		)
-		if err := rows.Scan(&id, &name, &coverURL, &duration, &streamURL, &isFavorite, &artistID, &artistName, &artistAvatar); err != nil {
+		if err := rows.Scan(&id, &name, &coverMediaID, &duration, &streamMediaID, &isFavorite, &artistID, &artistName, &artistAvatar); err != nil {
 			return nil, err
 		}
 
@@ -220,9 +220,9 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 			currentSong = PlaylistSong{
 				ID:              id,
 				Name:            name,
-				CoverURL:        coverURL,
+				CoverMediaID:    coverMediaID,
 				DurationSeconds: duration,
-				StreamURL:       streamURL,
+				StreamMediaID:   streamMediaID,
 				IsFavorite:      isFavorite,
 				Artists:         nil,
 			}
@@ -230,9 +230,9 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 
 		if artistID != nil && artistName != nil {
 			currentSong.Artists = append(currentSong.Artists, PlaylistArtist{
-				ID:        *artistID,
-				Name:      *artistName,
-				AvatarURL: artistAvatar,
+				ID:            *artistID,
+				Name:          *artistName,
+				AvatarMediaID: artistAvatar,
 			})
 		}
 	}

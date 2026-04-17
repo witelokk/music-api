@@ -12,38 +12,38 @@ const (
 type SongResult struct {
 	ID              string
 	Name            string
-	CoverURL        *string
+	CoverMediaID    *string
 	DurationSeconds int
-	StreamURL       string
+	StreamMediaID   string
 	IsFavorite      bool
 	Artists         []ArtistSummary
 }
 
 type ArtistSummary struct {
-	ID        string
-	Name      string
-	AvatarURL *string
+	ID            string
+	Name          string
+	AvatarMediaID *string
 }
 
 type ArtistResult struct {
-	ID        string
-	Name      string
-	AvatarURL *string
+	ID            string
+	Name          string
+	AvatarMediaID *string
 }
 
 type ReleaseResult struct {
-	ID        string
-	Name      string
-	CoverURL  *string
-	Type      int
-	ReleaseAt string
+	ID           string
+	Name         string
+	CoverMediaID *string
+	Type         int
+	ReleaseAt    string
 }
 
 type PlaylistResult struct {
-	ID         string
-	Name       string
-	CoverURL   *string
-	SongsCount int
+	ID           string
+	Name         string
+	CoverMediaID *string
+	SongsCount   int
 }
 
 type ResultItem struct {
@@ -56,10 +56,9 @@ type ResultItem struct {
 }
 
 type Results struct {
-	Query  string
-	Page   int
-	Limit  int
-	Total  int
-	Items  []ResultItem
+	Query string
+	Page  int
+	Limit int
+	Total int
+	Items []ResultItem
 }
-

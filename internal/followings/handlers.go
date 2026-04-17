@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
@@ -42,8 +43,9 @@ func HandleGetFollowings(
 			Id:   uuid.MustParse(artist.ID),
 			Name: artist.Name,
 		}
-		if artist.AvatarURL != nil {
-			summary.AvatarUrl = artist.AvatarURL
+		if artist.AvatarMediaID != nil && *artist.AvatarMediaID != "" {
+			avatarURL := mediaurl.Build(*artist.AvatarMediaID)
+			summary.AvatarUrl = &avatarURL
 		}
 		summaries = append(summaries, summary)
 		names = append(names, artist.Name)

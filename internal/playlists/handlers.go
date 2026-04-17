@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
@@ -41,8 +42,9 @@ func HandleGetPlaylists(
 			Name:       p.Name,
 			SongsCount: p.SongsCount,
 		}
-		if p.CoverURL != nil {
-			summary.CoverUrl = p.CoverURL
+		if p.CoverMediaID != nil && *p.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*p.CoverMediaID)
+			summary.CoverUrl = &coverURL
 		}
 		respPlaylists = append(respPlaylists, summary)
 	}
@@ -130,8 +132,9 @@ func HandleGetPlaylist(
 				Id:   uuid.MustParse(a.ID),
 				Name: a.Name,
 			}
-			if a.AvatarURL != nil {
-				summary.AvatarUrl = a.AvatarURL
+			if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+				avatarURL := mediaurl.Build(*a.AvatarMediaID)
+				summary.AvatarUrl = &avatarURL
 			}
 			artistSummaries = append(artistSummaries, summary)
 		}
@@ -140,19 +143,21 @@ func HandleGetPlaylist(
 			Id:              uuid.MustParse(sng.ID),
 			Name:            sng.Name,
 			DurationSeconds: sng.DurationSeconds,
-			StreamUrl:       sng.StreamURL,
+			StreamUrl:       mediaurl.Build(sng.StreamMediaID),
 			IsFavorite:      sng.IsFavorite,
 			Artists:         artistSummaries,
 		}
-		if sng.CoverURL != nil {
-			resp.CoverUrl = sng.CoverURL
+		if sng.CoverMediaID != nil && *sng.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*sng.CoverMediaID)
+			resp.CoverUrl = &coverURL
 		}
 		respSongs = append(respSongs, resp)
 	}
 
 	var coverURL *string
-	if pl.CoverURL != nil {
-		coverURL = pl.CoverURL
+	if pl.CoverMediaID != nil && *pl.CoverMediaID != "" {
+		value := mediaurl.Build(*pl.CoverMediaID)
+		coverURL = &value
 	}
 
 	return openapi.GetPlaylist200JSONResponse(openapi.Playlist{
@@ -270,8 +275,9 @@ func HandleGetPlaylistSongs(
 				Id:   uuid.MustParse(a.ID),
 				Name: a.Name,
 			}
-			if a.AvatarURL != nil {
-				summary.AvatarUrl = a.AvatarURL
+			if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+				avatarURL := mediaurl.Build(*a.AvatarMediaID)
+				summary.AvatarUrl = &avatarURL
 			}
 			artistSummaries = append(artistSummaries, summary)
 		}
@@ -280,12 +286,13 @@ func HandleGetPlaylistSongs(
 			Id:              uuid.MustParse(sng.ID),
 			Name:            sng.Name,
 			DurationSeconds: sng.DurationSeconds,
-			StreamUrl:       sng.StreamURL,
+			StreamUrl:       mediaurl.Build(sng.StreamMediaID),
 			IsFavorite:      sng.IsFavorite,
 			Artists:         artistSummaries,
 		}
-		if sng.CoverURL != nil {
-			resp.CoverUrl = sng.CoverURL
+		if sng.CoverMediaID != nil && *sng.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*sng.CoverMediaID)
+			resp.CoverUrl = &coverURL
 		}
 		respSongs = append(respSongs, resp)
 	}

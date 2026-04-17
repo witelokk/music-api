@@ -19,16 +19,16 @@ type PostgresFavoritesRepository struct {
 type FavoriteSong struct {
 	ID              string
 	Name            string
-	CoverURL        *string
+	CoverMediaID    *string
 	DurationSeconds int
-	StreamURL       string
+	StreamMediaID   string
 	Artists         []ArtistSummary
 }
 
 type ArtistSummary struct {
-	ID        string
-	Name      string
-	AvatarURL *string
+	ID            string
+	Name          string
+	AvatarMediaID *string
 }
 
 func NewPostgresFavoritesRepository(pool *pgxpool.Pool) *PostgresFavoritesRepository {
@@ -60,12 +60,12 @@ func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, user
 	const query = `
 		SELECT s.id,
 		       s.name,
-		       s.cover_url,
+		       s.cover_media_id,
 		       s.duration,
-		       s.stream_url,
+		       s.stream_media_id,
 		       a.id AS artist_id,
 		       a.name AS artist_name,
-		       a.avatar_url
+		       a.avatar_media_id
 		FROM favorites f
 		JOIN songs s ON s.id = f.song_id
 		LEFT JOIN song_artists sa ON sa.song_id = s.id
@@ -81,23 +81,23 @@ func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, user
 	defer rows.Close()
 
 	var (
-		result     []FavoriteSong
-		currentID  string
+		result      []FavoriteSong
+		currentID   string
 		currentSong FavoriteSong
 	)
 
 	for rows.Next() {
 		var (
-			id           string
-			name         string
-			coverURL     *string
-			duration     int
-			stream       string
-			artistID     *string
-			artistName   *string
-			artistAvatar *string
+			id            string
+			name          string
+			coverMediaID  *string
+			duration      int
+			streamMediaID string
+			artistID      *string
+			artistName    *string
+			artistAvatar  *string
 		)
-		if err := rows.Scan(&id, &name, &coverURL, &duration, &stream, &artistID, &artistName, &artistAvatar); err != nil {
+		if err := rows.Scan(&id, &name, &coverMediaID, &duration, &streamMediaID, &artistID, &artistName, &artistAvatar); err != nil {
 			return nil, err
 		}
 
@@ -109,18 +109,18 @@ func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, user
 			currentSong = FavoriteSong{
 				ID:              id,
 				Name:            name,
-				CoverURL:        coverURL,
+				CoverMediaID:    coverMediaID,
 				DurationSeconds: duration,
-				StreamURL:       stream,
+				StreamMediaID:   streamMediaID,
 				Artists:         nil,
 			}
 		}
 
 		if artistID != nil && artistName != nil {
 			currentSong.Artists = append(currentSong.Artists, ArtistSummary{
-				ID:        *artistID,
-				Name:      *artistName,
-				AvatarURL: artistAvatar,
+				ID:            *artistID,
+				Name:          *artistName,
+				AvatarMediaID: artistAvatar,
 			})
 		}
 	}

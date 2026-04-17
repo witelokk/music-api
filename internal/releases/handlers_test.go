@@ -58,7 +58,7 @@ func TestHandleGetRelease_Success(t *testing.T) {
 				ID:              uuid.New().String(),
 				Name:            "Test Song",
 				DurationSeconds: 180,
-				StreamURL:       "http://example.com/stream",
+				StreamMediaID:   "stream-id",
 				Artists: []ReleaseArtist{
 					{
 						ID:   uuid.New().String(),
@@ -89,6 +89,9 @@ func TestHandleGetRelease_Success(t *testing.T) {
 
 	if len(okResp.Songs.Songs) != 1 {
 		t.Fatalf("expected 1 song, got %d", len(okResp.Songs.Songs))
+	}
+	if okResp.Songs.Songs[0].StreamUrl != "/media/stream-id" {
+		t.Fatalf("expected stream url %q, got %q", "/media/stream-id", okResp.Songs.Songs[0].StreamUrl)
 	}
 	if len(okResp.Songs.Songs[0].Artists) != 1 {
 		t.Fatalf("expected 1 artist for song, got %d", len(okResp.Songs.Songs[0].Artists))

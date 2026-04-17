@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/requestctx"
 )
@@ -42,8 +43,9 @@ func HandleGetRelease(
 				Id:   uuid.MustParse(a.ID),
 				Name: a.Name,
 			}
-			if a.AvatarURL != nil {
-				summary.AvatarUrl = a.AvatarURL
+			if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+				avatarURL := mediaurl.Build(*a.AvatarMediaID)
+				summary.AvatarUrl = &avatarURL
 			}
 			artistSummaries = append(artistSummaries, summary)
 		}
@@ -52,12 +54,13 @@ func HandleGetRelease(
 			Id:              uuid.MustParse(s.ID),
 			Name:            s.Name,
 			DurationSeconds: s.DurationSeconds,
-			StreamUrl:       s.StreamURL,
+			StreamUrl:       mediaurl.Build(s.StreamMediaID),
 			IsFavorite:      false,
 			Artists:         artistSummaries,
 		}
-		if s.CoverURL != nil {
-			song.CoverUrl = s.CoverURL
+		if s.CoverMediaID != nil && *s.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*s.CoverMediaID)
+			song.CoverUrl = &coverURL
 		}
 		songs = append(songs, song)
 	}
@@ -69,8 +72,9 @@ func HandleGetRelease(
 			Id:   uuid.MustParse(a.ID),
 			Name: a.Name,
 		}
-		if a.AvatarURL != nil {
-			summary.AvatarUrl = a.AvatarURL
+		if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+			avatarURL := mediaurl.Build(*a.AvatarMediaID)
+			summary.AvatarUrl = &avatarURL
 		}
 		artistSummaries = append(artistSummaries, summary)
 		artistNames = append(artistNames, a.Name)
@@ -92,8 +96,9 @@ func HandleGetRelease(
 		},
 	}
 
-	if release.CoverURL != nil {
-		resp.CoverUrl = release.CoverURL
+	if release.CoverMediaID != nil && *release.CoverMediaID != "" {
+		coverURL := mediaurl.Build(*release.CoverMediaID)
+		resp.CoverUrl = &coverURL
 	}
 
 	return openapi.GetRelease200JSONResponse(resp), nil

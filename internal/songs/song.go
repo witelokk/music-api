@@ -3,14 +3,14 @@ package songs
 type Song struct {
 	ID              string
 	Name            string
-	CoverURL        *string
+	CoverMediaID    *string
 	DurationSeconds int
-	StreamURL       string
+	StreamMediaID   string
 	Artists         []ArtistSummary
 }
 
 type ArtistSummary struct {
-	ID        string
-	Name      string
-	AvatarURL *string
+	ID            string
+	Name          string
+	AvatarMediaID *string
 }

@@ -10,6 +10,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	releasesapi "github.com/witelokk/music-api/internal/releases"
 	"github.com/witelokk/music-api/internal/requestctx"
@@ -45,8 +46,9 @@ func HandleGetHomeScreenLayout(
 			Name:       p.Name,
 			SongsCount: p.SongsCount,
 		}
-		if p.CoverURL != nil {
-			summary.CoverUrl = p.CoverURL
+		if p.CoverMediaID != nil && *p.CoverMediaID != "" {
+			coverURL := mediaurl.Build(*p.CoverMediaID)
+			summary.CoverUrl = &coverURL
 		}
 		respPlaylists = append(respPlaylists, summary)
 	}
@@ -60,8 +62,9 @@ func HandleGetHomeScreenLayout(
 			Id:   uuid.MustParse(a.ID),
 			Name: a.Name,
 		}
-		if a.AvatarURL != nil {
-			summary.AvatarUrl = a.AvatarURL
+		if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+			avatarURL := mediaurl.Build(*a.AvatarMediaID)
+			summary.AvatarUrl = &avatarURL
 		}
 		artistSummaries = append(artistSummaries, summary)
 		artistNames = append(artistNames, a.Name)
@@ -71,13 +74,17 @@ func HandleGetHomeScreenLayout(
 	for _, sec := range layout.Sections {
 		releases := make([]openapi.ReleaseSummary, 0, len(sec.Releases))
 		for _, rel := range sec.Releases {
-			releases = append(releases, openapi.ReleaseSummary{
+			releaseSummary := openapi.ReleaseSummary{
 				Id:         openapi_types.UUID(uuid.MustParse(rel.ID)),
 				Name:       rel.Name,
-				CoverUrl:   rel.CoverURL,
 				Type:       releasesapi.MapReleaseType(rel.Type),
 				ReleasedAt: rel.ReleaseAt.Format("2006-01-02"),
-			})
+			}
+			if rel.CoverMediaID != nil && *rel.CoverMediaID != "" {
+				coverURL := mediaurl.Build(*rel.CoverMediaID)
+				releaseSummary.CoverUrl = &coverURL
+			}
+			releases = append(releases, releaseSummary)
 		}
 
 		sections = append(sections, openapi.HomeScreenSection{

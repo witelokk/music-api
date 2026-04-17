@@ -9,11 +9,11 @@ import (
 )
 
 type fakePlaylistsRepo struct {
-	createID string
+	createID  string
 	createErr error
 
-	updateErr  error
-	deleteErr  error
+	updateErr error
+	deleteErr error
 
 	playlists    []PlaylistSummary
 	playlistsErr error
@@ -113,7 +113,7 @@ func TestPlaylistsService_GetPlaylistWithSongs_OK(t *testing.T) {
 				ID:              "song-id",
 				Name:            "Song",
 				DurationSeconds: 120,
-				StreamURL:       "stream",
+				StreamMediaID:   "stream-id",
 				IsFavorite:      true,
 			},
 		},
