@@ -18,6 +18,7 @@ type ReleaseSong struct {
 	CoverMediaID    *string
 	DurationSeconds int
 	StreamMediaID   string
+	IsFavorite      bool
 	Artists         []ReleaseArtist
 }
 

@@ -13,8 +13,8 @@ func NewService(repo ReleasesRepository) *ReleasesService {
 	return &ReleasesService{repo: repo}
 }
 
-func (s *ReleasesService) GetRelease(ctx context.Context, id string) (*Release, error) {
-	return s.repo.GetReleaseByID(ctx, id)
+func (s *ReleasesService) GetRelease(ctx context.Context, userID, id string) (*Release, error) {
+	return s.repo.GetReleaseByID(ctx, userID, id)
 }
 
 var ErrReleaseNotFound = errors.New("release not found")

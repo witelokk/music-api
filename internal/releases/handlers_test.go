@@ -8,20 +8,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
 
 func newTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-}
-
-type fakeReleasesService struct {
-	release *Release
-	err     error
-}
-
-func (s *fakeReleasesService) GetRelease(ctx context.Context, id string) (*Release, error) {
-	return s.release, s.err
 }
 
 func TestHandleGetRelease_NotFound(t *testing.T) {
@@ -31,7 +23,7 @@ func TestHandleGetRelease_NotFound(t *testing.T) {
 
 	svcWrapper := &ReleasesService{repo: &fakeReleasesRepo{err: ErrReleaseNotFound}}
 
-	resp, err := HandleGetRelease(context.Background(), svcWrapper, logger, req)
+	resp, err := HandleGetRelease(auth.WithUserID(context.Background(), "user-id"), svcWrapper, logger, req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -59,6 +51,7 @@ func TestHandleGetRelease_Success(t *testing.T) {
 				Name:            "Test Song",
 				DurationSeconds: 180,
 				StreamMediaID:   "stream-id",
+				IsFavorite:      true,
 				Artists: []ReleaseArtist{
 					{
 						ID:   uuid.New().String(),
@@ -74,7 +67,7 @@ func TestHandleGetRelease_Success(t *testing.T) {
 
 	req := openapi.GetReleaseRequestObject{Id: id}
 
-	resp, err := HandleGetRelease(context.Background(), svc, logger, req)
+	resp, err := HandleGetRelease(auth.WithUserID(context.Background(), "user-id"), svc, logger, req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -93,10 +86,32 @@ func TestHandleGetRelease_Success(t *testing.T) {
 	if okResp.Songs.Songs[0].StreamUrl != "/media/stream-id" {
 		t.Fatalf("expected stream url %q, got %q", "/media/stream-id", okResp.Songs.Songs[0].StreamUrl)
 	}
+	if !okResp.Songs.Songs[0].IsFavorite {
+		t.Fatalf("expected song to be favorite")
+	}
 	if len(okResp.Songs.Songs[0].Artists) != 1 {
 		t.Fatalf("expected 1 artist for song, got %d", len(okResp.Songs.Songs[0].Artists))
 	}
 	if okResp.Songs.Songs[0].Artists[0].Name != "Artist 1" {
 		t.Fatalf("expected artist name %q, got %q", "Artist 1", okResp.Songs.Songs[0].Artists[0].Name)
+	}
+}
+
+func TestHandleGetRelease_MissingUser(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
+	req := openapi.GetReleaseRequestObject{Id: uuid.New()}
+	svc := &ReleasesService{repo: &fakeReleasesRepo{}}
+
+	resp, err := HandleGetRelease(context.Background(), svc, logger, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	errResp, ok := resp.(openapi.GetRelease500JSONResponse)
+	if !ok {
+		t.Fatalf("expected 500 response, got %T", resp)
+	}
+	if errResp.Error != "failed to fetch release" {
+		t.Fatalf("expected error %q, got %q", "failed to fetch release", errResp.Error)
 	}
 }

@@ -10,7 +10,7 @@ import (
 )
 
 type ReleasesRepository interface {
-	GetReleaseByID(ctx context.Context, id string) (*Release, error)
+	GetReleaseByID(ctx context.Context, userID, id string) (*Release, error)
 	GetRandomReleases(ctx context.Context, seed string, limit int) ([]Release, error)
 }
 
@@ -22,7 +22,7 @@ func NewPostgresReleasesRepository(pool *pgxpool.Pool) *PostgresReleasesReposito
 	return &PostgresReleasesRepository{pool: pool}
 }
 
-func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id string) (*Release, error) {
+func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, userID, id string) (*Release, error) {
 	const releaseQuery = `
 		SELECT id, name, cover_media_id, type, release_at
 		FROM releases
@@ -30,7 +30,16 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 	`
 
 	const songsQuery = `
-		SELECT s.id, s.name, s.cover_media_id, s.duration, s.stream_media_id
+		SELECT s.id,
+		       s.name,
+		       s.cover_media_id,
+		       s.duration,
+		       s.stream_media_id,
+		       EXISTS (
+		         SELECT 1
+		         FROM favorites f
+		         WHERE f.user_id = $2 AND f.song_id = s.id
+		       ) AS is_favorite
 		FROM release_songs rs
 		JOIN songs s ON s.id = rs.song_id
 		WHERE rs.release_id = $1
@@ -77,7 +86,7 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 		return nil, err
 	}
 
-	songRows, err := tx.Query(ctx, songsQuery, id)
+	songRows, err := tx.Query(ctx, songsQuery, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +100,9 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 			songCoverID   *string
 			duration      int
 			streamMediaID string
+			isFavorite    bool
 		)
-		if err := songRows.Scan(&songID, &songName, &songCoverID, &duration, &streamMediaID); err != nil {
+		if err := songRows.Scan(&songID, &songName, &songCoverID, &duration, &streamMediaID, &isFavorite); err != nil {
 			return nil, err
 		}
 		songs = append(songs, ReleaseSong{
@@ -101,6 +111,7 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, id stri
 			CoverMediaID:    songCoverID,
 			DurationSeconds: duration,
 			StreamMediaID:   streamMediaID,
+			IsFavorite:      isFavorite,
 		})
 	}
 	if err := songRows.Err(); err != nil {

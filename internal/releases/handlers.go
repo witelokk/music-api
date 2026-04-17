@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/witelokk/music-api/internal/auth"
 	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/requestctx"
@@ -19,16 +20,21 @@ func HandleGetRelease(
 	req openapi.GetReleaseRequestObject,
 ) (openapi.GetReleaseResponseObject, error) {
 	reqLogger := requestctx.LoggerFromContext(ctx, logger)
+	userID := auth.UserIDFromContext(ctx)
+	if userID == "" {
+		return openapi.GetRelease500JSONResponse(openapi.Error{Error: "failed to fetch release"}), nil
+	}
 
 	id := req.Id
 
-	release, err := releasesService.GetRelease(ctx, id.String())
+	release, err := releasesService.GetRelease(ctx, userID, id.String())
 	if err != nil {
 		if errors.Is(err, ErrReleaseNotFound) {
 			return openapi.GetRelease404JSONResponse(openapi.Error{Error: "release not found"}), nil
 		}
 
 		reqLogger.Error("failed to get release",
+			slog.String("user_id", userID),
 			slog.String("id", id.String()),
 			slog.String("error", err.Error()),
 		)
@@ -55,7 +61,7 @@ func HandleGetRelease(
 			Name:            s.Name,
 			DurationSeconds: s.DurationSeconds,
 			StreamUrl:       mediaurl.Build(s.StreamMediaID),
-			IsFavorite:      false,
+			IsFavorite:      s.IsFavorite,
 			Artists:         artistSummaries,
 		}
 		if s.CoverMediaID != nil && *s.CoverMediaID != "" {

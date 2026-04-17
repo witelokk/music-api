@@ -69,7 +69,7 @@ type fakeReleasesRepo struct {
 	err      error
 }
 
-func (r *fakeReleasesRepo) GetReleaseByID(ctx context.Context, id string) (*releases.Release, error) {
+func (r *fakeReleasesRepo) GetReleaseByID(ctx context.Context, userID, id string) (*releases.Release, error) {
 	return nil, nil
 }
 

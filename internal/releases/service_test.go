@@ -9,9 +9,13 @@ import (
 type fakeReleasesRepo struct {
 	release *Release
 	err     error
+	userID  string
+	id      string
 }
 
-func (r *fakeReleasesRepo) GetReleaseByID(ctx context.Context, id string) (*Release, error) {
+func (r *fakeReleasesRepo) GetReleaseByID(ctx context.Context, userID, id string) (*Release, error) {
+	r.userID = userID
+	r.id = id
 	return r.release, r.err
 }
 
@@ -28,12 +32,15 @@ func TestService_GetRelease_Success(t *testing.T) {
 	repo := &fakeReleasesRepo{release: want}
 	svc := NewService(repo)
 
-	got, err := svc.GetRelease(context.Background(), "release-id")
+	got, err := svc.GetRelease(context.Background(), "user-id", "release-id")
 	if err != nil {
 		t.Fatalf("GetRelease() error = %v, want nil", err)
 	}
 	if got != want {
 		t.Fatalf("GetRelease() = %#v, want %#v", got, want)
+	}
+	if repo.userID != "user-id" || repo.id != "release-id" {
+		t.Fatalf("GetRelease() called repo with userID=%q id=%q", repo.userID, repo.id)
 	}
 }
 
@@ -41,7 +48,7 @@ func TestService_GetRelease_NotFound(t *testing.T) {
 	repo := &fakeReleasesRepo{err: ErrReleaseNotFound}
 	svc := NewService(repo)
 
-	got, err := svc.GetRelease(context.Background(), "missing-id")
+	got, err := svc.GetRelease(context.Background(), "user-id", "missing-id")
 	if got != nil {
 		t.Fatalf("expected nil release, got %#v", got)
 	}
@@ -55,7 +62,7 @@ func TestService_GetRelease_RepoError(t *testing.T) {
 	repo := &fakeReleasesRepo{err: repoErr}
 	svc := NewService(repo)
 
-	got, err := svc.GetRelease(context.Background(), "release-id")
+	got, err := svc.GetRelease(context.Background(), "user-id", "release-id")
 	if got != nil {
 		t.Fatalf("expected nil release, got %#v", got)
 	}
