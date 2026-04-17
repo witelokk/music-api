@@ -17,6 +17,7 @@ type PopularSong struct {
 	CoverMediaID    *string
 	DurationSeconds int
 	StreamMediaID   string
+	Artists         []ArtistSummary
 }
 
 type ArtistRelease struct {
@@ -25,4 +26,10 @@ type ArtistRelease struct {
 	CoverMediaID *string
 	Type         int
 	ReleaseAt    time.Time
+}
+
+type ArtistSummary struct {
+	ID            string
+	Name          string
+	AvatarMediaID *string
 }

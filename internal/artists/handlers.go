@@ -40,24 +40,28 @@ func HandleGetArtist(
 
 	artistID := uuid.MustParse(artist.ID)
 
-	mainArtistSummary := openapi.ArtistSummary{
-		Id:   artistID,
-		Name: artist.Name,
-	}
-	if artist.AvatarMediaID != nil && *artist.AvatarMediaID != "" {
-		avatarURL := mediaurl.Build(*artist.AvatarMediaID)
-		mainArtistSummary.AvatarUrl = &avatarURL
-	}
-
 	popularSongs := make([]openapi.Song, 0, len(artist.Popular))
 	for _, s := range artist.Popular {
+		songArtists := make([]openapi.ArtistSummary, 0, len(s.Artists))
+		for _, a := range s.Artists {
+			summary := openapi.ArtistSummary{
+				Id:   uuid.MustParse(a.ID),
+				Name: a.Name,
+			}
+			if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+				avatarURL := mediaurl.Build(*a.AvatarMediaID)
+				summary.AvatarUrl = &avatarURL
+			}
+			songArtists = append(songArtists, summary)
+		}
+
 		song := openapi.Song{
 			Id:              uuid.MustParse(s.ID),
 			Name:            s.Name,
 			DurationSeconds: s.DurationSeconds,
 			StreamUrl:       mediaurl.Build(s.StreamMediaID),
 			IsFavorite:      false,
-			Artists:         []openapi.ArtistSummary{mainArtistSummary},
+			Artists:         songArtists,
 		}
 		if s.CoverMediaID != nil && *s.CoverMediaID != "" {
 			coverURL := mediaurl.Build(*s.CoverMediaID)

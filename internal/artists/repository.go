@@ -46,6 +46,21 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 		LIMIT 5
 	`
 
+	const popularSongArtistsQuery = `
+		SELECT top_songs.song_id, a.id, a.name, a.avatar_media_id
+		FROM (
+			SELECT s.id AS song_id
+			FROM song_artists sa
+			JOIN songs s ON s.id = sa.song_id
+			WHERE sa.artist_id = $1
+			ORDER BY s.streams_count DESC
+			LIMIT 5
+		) top_songs
+		JOIN song_artists sa ON sa.song_id = top_songs.song_id
+		JOIN artists a ON a.id = sa.artist_id
+		ORDER BY top_songs.song_id, a.name
+	`
+
 	const releasesQuery = `
 		SELECT DISTINCT r.id, r.name, r.cover_media_id, r.type, r.release_at
 		FROM song_artists sa
@@ -106,6 +121,37 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	}
 	if err := popRows.Err(); err != nil {
 		return nil, 0, false, err
+	}
+
+	popArtistRows, err := tx.Query(ctx, popularSongArtistsQuery, id)
+	if err != nil {
+		return nil, 0, false, err
+	}
+	defer popArtistRows.Close()
+
+	songArtists := make(map[string][]ArtistSummary)
+	for popArtistRows.Next() {
+		var (
+			songID        string
+			artistID      string
+			artistName    string
+			avatarMediaID *string
+		)
+		if err := popArtistRows.Scan(&songID, &artistID, &artistName, &avatarMediaID); err != nil {
+			return nil, 0, false, err
+		}
+		songArtists[songID] = append(songArtists[songID], ArtistSummary{
+			ID:            artistID,
+			Name:          artistName,
+			AvatarMediaID: avatarMediaID,
+		})
+	}
+	if err := popArtistRows.Err(); err != nil {
+		return nil, 0, false, err
+	}
+
+	for i := range popular {
+		popular[i].Artists = songArtists[popular[i].ID]
 	}
 
 	relRows, err := tx.Query(ctx, releasesQuery, id)
