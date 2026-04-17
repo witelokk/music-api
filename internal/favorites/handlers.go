@@ -33,7 +33,7 @@ func HandleGetFavorites(
 		return openapi.GetFavorites500JSONResponse(openapi.Error{Error: "failed to fetch favorite songs"}), nil
 	}
 
-	var songsList []openapi.Song
+	songsList := make([]openapi.Song, 0, len(songs))
 	for _, sng := range songs {
 		artistSummaries := make([]openapi.ArtistSummary, 0, len(sng.Artists))
 		for _, a := range sng.Artists {

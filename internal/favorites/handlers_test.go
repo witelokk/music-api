@@ -2,6 +2,7 @@ package favorites
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"testing"
@@ -54,6 +55,14 @@ func TestHandleGetFavorites_Empty(t *testing.T) {
 	}
 	if okResp.Count != 0 || len(okResp.Songs) != 0 {
 		t.Fatalf("expected empty favorites list, got count=%d songs=%d", okResp.Count, len(okResp.Songs))
+	}
+
+	raw, err := json.Marshal(okResp)
+	if err != nil {
+		t.Fatalf("failed to marshal response: %v", err)
+	}
+	if string(raw) != "{\"count\":0,\"songs\":[]}" {
+		t.Fatalf("unexpected json payload: %s", raw)
 	}
 }
 
