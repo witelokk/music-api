@@ -32,41 +32,40 @@ CREATE TABLE IF NOT EXISTS releases (
 );
 
 CREATE TABLE IF NOT EXISTS song_artists (
-    song_id UUID NOT NULL,
-    artist_id UUID NOT NULL,
+    song_id UUID NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+    artist_id UUID NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
     PRIMARY KEY (song_id, artist_id)
 );
 
 CREATE TABLE IF NOT EXISTS release_songs (
-    release_id UUID NOT NULL,
-    song_id UUID NOT NULL,
+    release_id UUID NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+    song_id UUID NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
     PRIMARY KEY (release_id, song_id)
 );
 
 CREATE TABLE IF NOT EXISTS favorites (
-    user_id UUID NOT NULL,
-    song_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    song_id UUID NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
     added_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (user_id, song_id)
 );
 
 CREATE TABLE IF NOT EXISTS followings (
-    user_id UUID NOT NULL,
-    artist_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    artist_id UUID NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, artist_id)
 );
 
 CREATE TABLE IF NOT EXISTS playlists (
     id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS playlist_songs (
-    playlist_id UUID NOT NULL,
-    song_id UUID NOT NULL,
+    playlist_id UUID NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+    song_id UUID NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
     added_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (playlist_id, song_id)
 );
-
