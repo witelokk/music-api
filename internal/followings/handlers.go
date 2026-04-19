@@ -100,19 +100,12 @@ func HandleUnfollowArtist(
 ) (openapi.UnfollowArtistResponseObject, error) {
 	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 
-	if req.Body == nil {
-		return openapi.UnfollowArtist400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
-	}
-
 	userID := auth.UserIDFromContext(ctx)
 	if userID == "" {
 		return openapi.UnfollowArtist500JSONResponse(openapi.Error{Error: "failed to unfollow artist"}), nil
 	}
 
-	artistID := req.Body.ArtistId.String()
-	if artistID == "" {
-		return openapi.UnfollowArtist400JSONResponse(openapi.Error{Error: "artist_id is required"}), nil
-	}
+	artistID := req.Id.String()
 
 	if err := followingsService.Unfollow(ctx, userID, artistID); err != nil {
 		reqLogger.Error("failed to unfollow artist",

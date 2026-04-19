@@ -352,21 +352,13 @@ func HandleRemoveSongFromPlaylist(
 ) (openapi.RemoveSongFromPlaylistResponseObject, error) {
 	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 
-	if req.Body == nil {
-		return openapi.RemoveSongFromPlaylist400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
-	}
-
 	userID := auth.UserIDFromContext(ctx)
 	if userID == "" {
 		return openapi.RemoveSongFromPlaylist500JSONResponse(openapi.Error{Error: "failed to remove song from playlist"}), nil
 	}
 
 	playlistID := req.Id.String()
-	songID := req.Body.SongId.String()
-
-	if songID == "" {
-		return openapi.RemoveSongFromPlaylist400JSONResponse(openapi.Error{Error: "song_id is required"}), nil
-	}
+	songID := req.SongId.String()
 
 	if err := playlistsService.RemoveSongFromPlaylist(ctx, userID, playlistID, songID); err != nil {
 		if errors.Is(err, ErrPlaylistNotFound) {

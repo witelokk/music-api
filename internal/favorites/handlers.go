@@ -112,19 +112,12 @@ func HandleRemoveFavorite(
 ) (openapi.RemoveFavoriteResponseObject, error) {
 	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 
-	if req.Body == nil {
-		return openapi.RemoveFavorite400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
-	}
-
 	userID := auth.UserIDFromContext(ctx)
 	if userID == "" {
 		return openapi.RemoveFavorite500JSONResponse(openapi.Error{Error: "failed to remove song from favorites"}), nil
 	}
 
-	songID := req.Body.SongId.String()
-	if songID == "" {
-		return openapi.RemoveFavorite400JSONResponse(openapi.Error{Error: "song_id is required"}), nil
-	}
+	songID := req.Id.String()
 
 	if err := favoritesService.RemoveFavorite(ctx, userID, songID); err != nil {
 		reqLogger.Error("failed to remove favorite",

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
@@ -67,16 +69,18 @@ func TestHandleFollowArtist_BadBody(t *testing.T) {
 	}
 }
 
-func TestHandleUnfollowArtist_BadBody(t *testing.T) {
+func TestHandleUnfollowArtist_Success(t *testing.T) {
 	logger := newTestLogger()
 	svc := NewFollowingsService(&fakeFollowingsRepo{})
 
 	ctx := auth.WithUserID(context.Background(), "user-id")
-	resp, err := HandleUnfollowArtist(ctx, svc, logger, openapi.UnfollowArtistRequestObject{})
+	resp, err := HandleUnfollowArtist(ctx, svc, logger, openapi.UnfollowArtistRequestObject{
+		Id: openapi_types.UUID(uuid.New()),
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := resp.(openapi.UnfollowArtist400JSONResponse); !ok {
-		t.Fatalf("expected 400 response, got %T", resp)
+	if _, ok := resp.(openapi.UnfollowArtist204Response); !ok {
+		t.Fatalf("expected 204 response, got %T", resp)
 	}
 }

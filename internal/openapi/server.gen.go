@@ -348,11 +348,6 @@ type ReleaseSummaryList struct {
 // ReleaseType defines model for ReleaseType.
 type ReleaseType string
 
-// RemoveSongFromPlaylistRequest defines model for RemoveSongFromPlaylistRequest.
-type RemoveSongFromPlaylistRequest struct {
-	SongId openapi_types.UUID `json:"song_id"`
-}
-
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
 	Limit   int                `json:"limit"`
@@ -429,14 +424,8 @@ type SearchParams struct {
 // SearchParamsType defines parameters for Search.
 type SearchParamsType string
 
-// RemoveFavoriteJSONRequestBody defines body for RemoveFavorite for application/json ContentType.
-type RemoveFavoriteJSONRequestBody = FavoriteSongRequest
-
 // AddFavoriteJSONRequestBody defines body for AddFavorite for application/json ContentType.
 type AddFavoriteJSONRequestBody = FavoriteSongRequest
-
-// UnfollowArtistJSONRequestBody defines body for UnfollowArtist for application/json ContentType.
-type UnfollowArtistJSONRequestBody = FollowArtistRequest
 
 // FollowArtistJSONRequestBody defines body for FollowArtist for application/json ContentType.
 type FollowArtistJSONRequestBody = FollowArtistRequest
@@ -446,9 +435,6 @@ type CreatePlaylistJSONRequestBody = CreatePlaylistRequest
 
 // UpdatePlaylistJSONRequestBody defines body for UpdatePlaylist for application/json ContentType.
 type UpdatePlaylistJSONRequestBody = UpdatePlaylistRequest
-
-// RemoveSongFromPlaylistJSONRequestBody defines body for RemoveSongFromPlaylist for application/json ContentType.
-type RemoveSongFromPlaylistJSONRequestBody = RemoveSongFromPlaylistRequest
 
 // AddSongToPlaylistJSONRequestBody defines body for AddSongToPlaylist for application/json ContentType.
 type AddSongToPlaylistJSONRequestBody = AddSongToPlaylistRequest
@@ -616,24 +602,24 @@ type ServerInterface interface {
 	// Get artist by ID
 	// (GET /artists/{id})
 	GetArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Remove song from favorites
-	// (DELETE /favorites)
-	RemoveFavorite(w http.ResponseWriter, r *http.Request)
 	// Get favorite songs
 	// (GET /favorites)
 	GetFavorites(w http.ResponseWriter, r *http.Request)
 	// Add song to favorites
 	// (POST /favorites)
 	AddFavorite(w http.ResponseWriter, r *http.Request)
-	// Unfollow an artist
-	// (DELETE /followings)
-	UnfollowArtist(w http.ResponseWriter, r *http.Request)
+	// Remove song from favorites
+	// (DELETE /favorites/{id})
+	RemoveFavorite(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get followed artists
 	// (GET /followings)
 	GetFollowings(w http.ResponseWriter, r *http.Request)
 	// Follow an artist
 	// (POST /followings)
 	FollowArtist(w http.ResponseWriter, r *http.Request)
+	// Unfollow an artist
+	// (DELETE /followings/{id})
+	UnfollowArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get home screen layout
 	// (GET /home-screen-layout)
 	GetHomeScreenLayout(w http.ResponseWriter, r *http.Request)
@@ -655,15 +641,15 @@ type ServerInterface interface {
 	// Update a playlist
 	// (PUT /playlists/{id})
 	UpdatePlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Remove song from playlist
-	// (DELETE /playlists/{id}/songs)
-	RemoveSongFromPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get playlist songs
 	// (GET /playlists/{id}/songs)
 	GetPlaylistSongs(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Add song to playlist
 	// (POST /playlists/{id}/songs)
 	AddSongToPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Remove song from playlist
+	// (DELETE /playlists/{id}/songs/{songId})
+	RemoveSongFromPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, songId openapi_types.UUID)
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -727,26 +713,6 @@ func (siw *ServerInterfaceWrapper) GetArtist(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
-// RemoveFavorite operation middleware
-func (siw *ServerInterfaceWrapper) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RemoveFavorite(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetFavorites operation middleware
 func (siw *ServerInterfaceWrapper) GetFavorites(w http.ResponseWriter, r *http.Request) {
 
@@ -787,8 +753,19 @@ func (siw *ServerInterfaceWrapper) AddFavorite(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
-// UnfollowArtist operation middleware
-func (siw *ServerInterfaceWrapper) UnfollowArtist(w http.ResponseWriter, r *http.Request) {
+// RemoveFavorite operation middleware
+func (siw *ServerInterfaceWrapper) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
 
 	ctx := r.Context()
 
@@ -797,7 +774,7 @@ func (siw *ServerInterfaceWrapper) UnfollowArtist(w http.ResponseWriter, r *http
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UnfollowArtist(w, r)
+		siw.Handler.RemoveFavorite(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -838,6 +815,37 @@ func (siw *ServerInterfaceWrapper) FollowArtist(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.FollowArtist(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UnfollowArtist operation middleware
+func (siw *ServerInterfaceWrapper) UnfollowArtist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UnfollowArtist(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1031,37 +1039,6 @@ func (siw *ServerInterfaceWrapper) UpdatePlaylist(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// RemoveSongFromPlaylist operation middleware
-func (siw *ServerInterfaceWrapper) RemoveSongFromPlaylist(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RemoveSongFromPlaylist(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetPlaylistSongs operation middleware
 func (siw *ServerInterfaceWrapper) GetPlaylistSongs(w http.ResponseWriter, r *http.Request) {
 
@@ -1115,6 +1092,46 @@ func (siw *ServerInterfaceWrapper) AddSongToPlaylist(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AddSongToPlaylist(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveSongFromPlaylist operation middleware
+func (siw *ServerInterfaceWrapper) RemoveSongFromPlaylist(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "songId" -------------
+	var songId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "songId", r.PathValue("songId"), &songId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "songId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveSongFromPlaylist(w, r, id, songId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1433,12 +1450,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("GET "+options.BaseURL+"/artists/{id}", wrapper.GetArtist)
-	m.HandleFunc("DELETE "+options.BaseURL+"/favorites", wrapper.RemoveFavorite)
 	m.HandleFunc("GET "+options.BaseURL+"/favorites", wrapper.GetFavorites)
 	m.HandleFunc("POST "+options.BaseURL+"/favorites", wrapper.AddFavorite)
-	m.HandleFunc("DELETE "+options.BaseURL+"/followings", wrapper.UnfollowArtist)
+	m.HandleFunc("DELETE "+options.BaseURL+"/favorites/{id}", wrapper.RemoveFavorite)
 	m.HandleFunc("GET "+options.BaseURL+"/followings", wrapper.GetFollowings)
 	m.HandleFunc("POST "+options.BaseURL+"/followings", wrapper.FollowArtist)
+	m.HandleFunc("DELETE "+options.BaseURL+"/followings/{id}", wrapper.UnfollowArtist)
 	m.HandleFunc("GET "+options.BaseURL+"/home-screen-layout", wrapper.GetHomeScreenLayout)
 	m.HandleFunc("GET "+options.BaseURL+"/media/{id}", wrapper.GetMedia)
 	m.HandleFunc("GET "+options.BaseURL+"/playlists", wrapper.GetPlaylists)
@@ -1446,9 +1463,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("DELETE "+options.BaseURL+"/playlists/{id}", wrapper.DeletePlaylist)
 	m.HandleFunc("GET "+options.BaseURL+"/playlists/{id}", wrapper.GetPlaylist)
 	m.HandleFunc("PUT "+options.BaseURL+"/playlists/{id}", wrapper.UpdatePlaylist)
-	m.HandleFunc("DELETE "+options.BaseURL+"/playlists/{id}/songs", wrapper.RemoveSongFromPlaylist)
 	m.HandleFunc("GET "+options.BaseURL+"/playlists/{id}/songs", wrapper.GetPlaylistSongs)
 	m.HandleFunc("POST "+options.BaseURL+"/playlists/{id}/songs", wrapper.AddSongToPlaylist)
+	m.HandleFunc("DELETE "+options.BaseURL+"/playlists/{id}/songs/{songId}", wrapper.RemoveSongFromPlaylist)
 	m.HandleFunc("GET "+options.BaseURL+"/releases/{id}", wrapper.GetRelease)
 	m.HandleFunc("GET "+options.BaseURL+"/search", wrapper.Search)
 	m.HandleFunc("GET "+options.BaseURL+"/songs/{id}", wrapper.GetSong)
@@ -1489,49 +1506,6 @@ func (response GetArtist404JSONResponse) VisitGetArtistResponse(w http.ResponseW
 type GetArtist500JSONResponse Error
 
 func (response GetArtist500JSONResponse) VisitGetArtistResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RemoveFavoriteRequestObject struct {
-	Body *RemoveFavoriteJSONRequestBody
-}
-
-type RemoveFavoriteResponseObject interface {
-	VisitRemoveFavoriteResponse(w http.ResponseWriter) error
-}
-
-type RemoveFavorite204Response struct {
-}
-
-func (response RemoveFavorite204Response) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type RemoveFavorite400JSONResponse Error
-
-func (response RemoveFavorite400JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RemoveFavorite404JSONResponse Error
-
-func (response RemoveFavorite404JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RemoveFavorite500JSONResponse Error
-
-func (response RemoveFavorite500JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -1606,43 +1580,43 @@ func (response AddFavorite500JSONResponse) VisitAddFavoriteResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type UnfollowArtistRequestObject struct {
-	Body *UnfollowArtistJSONRequestBody
+type RemoveFavoriteRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
 }
 
-type UnfollowArtistResponseObject interface {
-	VisitUnfollowArtistResponse(w http.ResponseWriter) error
+type RemoveFavoriteResponseObject interface {
+	VisitRemoveFavoriteResponse(w http.ResponseWriter) error
 }
 
-type UnfollowArtist204Response struct {
+type RemoveFavorite204Response struct {
 }
 
-func (response UnfollowArtist204Response) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+func (response RemoveFavorite204Response) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
 	w.WriteHeader(204)
 	return nil
 }
 
-type UnfollowArtist400JSONResponse Error
+type RemoveFavorite400JSONResponse Error
 
-func (response UnfollowArtist400JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+func (response RemoveFavorite400JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type UnfollowArtist404JSONResponse Error
+type RemoveFavorite404JSONResponse Error
 
-func (response UnfollowArtist404JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+func (response RemoveFavorite404JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type UnfollowArtist500JSONResponse Error
+type RemoveFavorite500JSONResponse Error
 
-func (response UnfollowArtist500JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+func (response RemoveFavorite500JSONResponse) VisitRemoveFavoriteResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -1711,6 +1685,49 @@ func (response FollowArtist404JSONResponse) VisitFollowArtistResponse(w http.Res
 type FollowArtist500JSONResponse Error
 
 func (response FollowArtist500JSONResponse) VisitFollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnfollowArtistRequestObject struct {
+	Id openapi_types.UUID `json:"id"`
+}
+
+type UnfollowArtistResponseObject interface {
+	VisitUnfollowArtistResponse(w http.ResponseWriter) error
+}
+
+type UnfollowArtist204Response struct {
+}
+
+func (response UnfollowArtist204Response) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnfollowArtist400JSONResponse Error
+
+func (response UnfollowArtist400JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnfollowArtist404JSONResponse Error
+
+func (response UnfollowArtist404JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnfollowArtist500JSONResponse Error
+
+func (response UnfollowArtist500JSONResponse) VisitUnfollowArtistResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -2017,50 +2034,6 @@ func (response UpdatePlaylist500JSONResponse) VisitUpdatePlaylistResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type RemoveSongFromPlaylistRequestObject struct {
-	Id   openapi_types.UUID `json:"id"`
-	Body *RemoveSongFromPlaylistJSONRequestBody
-}
-
-type RemoveSongFromPlaylistResponseObject interface {
-	VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error
-}
-
-type RemoveSongFromPlaylist204Response struct {
-}
-
-func (response RemoveSongFromPlaylist204Response) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
-	return nil
-}
-
-type RemoveSongFromPlaylist400JSONResponse Error
-
-func (response RemoveSongFromPlaylist400JSONResponse) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RemoveSongFromPlaylist404JSONResponse Error
-
-func (response RemoveSongFromPlaylist404JSONResponse) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(404)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
-type RemoveSongFromPlaylist500JSONResponse Error
-
-func (response RemoveSongFromPlaylist500JSONResponse) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(500)
-
-	return json.NewEncoder(w).Encode(response)
-}
-
 type GetPlaylistSongsRequestObject struct {
 	Id openapi_types.UUID `json:"id"`
 }
@@ -2134,6 +2107,50 @@ func (response AddSongToPlaylist404JSONResponse) VisitAddSongToPlaylistResponse(
 type AddSongToPlaylist500JSONResponse Error
 
 func (response AddSongToPlaylist500JSONResponse) VisitAddSongToPlaylistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveSongFromPlaylistRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	SongId openapi_types.UUID `json:"songId"`
+}
+
+type RemoveSongFromPlaylistResponseObject interface {
+	VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error
+}
+
+type RemoveSongFromPlaylist204Response struct {
+}
+
+func (response RemoveSongFromPlaylist204Response) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveSongFromPlaylist400JSONResponse Error
+
+func (response RemoveSongFromPlaylist400JSONResponse) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveSongFromPlaylist404JSONResponse Error
+
+func (response RemoveSongFromPlaylist404JSONResponse) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveSongFromPlaylist500JSONResponse Error
+
+func (response RemoveSongFromPlaylist500JSONResponse) VisitRemoveSongFromPlaylistResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -2397,24 +2414,24 @@ type StrictServerInterface interface {
 	// Get artist by ID
 	// (GET /artists/{id})
 	GetArtist(ctx context.Context, request GetArtistRequestObject) (GetArtistResponseObject, error)
-	// Remove song from favorites
-	// (DELETE /favorites)
-	RemoveFavorite(ctx context.Context, request RemoveFavoriteRequestObject) (RemoveFavoriteResponseObject, error)
 	// Get favorite songs
 	// (GET /favorites)
 	GetFavorites(ctx context.Context, request GetFavoritesRequestObject) (GetFavoritesResponseObject, error)
 	// Add song to favorites
 	// (POST /favorites)
 	AddFavorite(ctx context.Context, request AddFavoriteRequestObject) (AddFavoriteResponseObject, error)
-	// Unfollow an artist
-	// (DELETE /followings)
-	UnfollowArtist(ctx context.Context, request UnfollowArtistRequestObject) (UnfollowArtistResponseObject, error)
+	// Remove song from favorites
+	// (DELETE /favorites/{id})
+	RemoveFavorite(ctx context.Context, request RemoveFavoriteRequestObject) (RemoveFavoriteResponseObject, error)
 	// Get followed artists
 	// (GET /followings)
 	GetFollowings(ctx context.Context, request GetFollowingsRequestObject) (GetFollowingsResponseObject, error)
 	// Follow an artist
 	// (POST /followings)
 	FollowArtist(ctx context.Context, request FollowArtistRequestObject) (FollowArtistResponseObject, error)
+	// Unfollow an artist
+	// (DELETE /followings/{id})
+	UnfollowArtist(ctx context.Context, request UnfollowArtistRequestObject) (UnfollowArtistResponseObject, error)
 	// Get home screen layout
 	// (GET /home-screen-layout)
 	GetHomeScreenLayout(ctx context.Context, request GetHomeScreenLayoutRequestObject) (GetHomeScreenLayoutResponseObject, error)
@@ -2436,15 +2453,15 @@ type StrictServerInterface interface {
 	// Update a playlist
 	// (PUT /playlists/{id})
 	UpdatePlaylist(ctx context.Context, request UpdatePlaylistRequestObject) (UpdatePlaylistResponseObject, error)
-	// Remove song from playlist
-	// (DELETE /playlists/{id}/songs)
-	RemoveSongFromPlaylist(ctx context.Context, request RemoveSongFromPlaylistRequestObject) (RemoveSongFromPlaylistResponseObject, error)
 	// Get playlist songs
 	// (GET /playlists/{id}/songs)
 	GetPlaylistSongs(ctx context.Context, request GetPlaylistSongsRequestObject) (GetPlaylistSongsResponseObject, error)
 	// Add song to playlist
 	// (POST /playlists/{id}/songs)
 	AddSongToPlaylist(ctx context.Context, request AddSongToPlaylistRequestObject) (AddSongToPlaylistResponseObject, error)
+	// Remove song from playlist
+	// (DELETE /playlists/{id}/songs/{songId})
+	RemoveSongFromPlaylist(ctx context.Context, request RemoveSongFromPlaylistRequestObject) (RemoveSongFromPlaylistResponseObject, error)
 	// Get release by ID
 	// (GET /releases/{id})
 	GetRelease(ctx context.Context, request GetReleaseRequestObject) (GetReleaseResponseObject, error)
@@ -2523,37 +2540,6 @@ func (sh *strictHandler) GetArtist(w http.ResponseWriter, r *http.Request, id op
 	}
 }
 
-// RemoveFavorite operation middleware
-func (sh *strictHandler) RemoveFavorite(w http.ResponseWriter, r *http.Request) {
-	var request RemoveFavoriteRequestObject
-
-	var body RemoveFavoriteJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.RemoveFavorite(ctx, request.(RemoveFavoriteRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RemoveFavorite")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(RemoveFavoriteResponseObject); ok {
-		if err := validResponse.VisitRemoveFavoriteResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // GetFavorites operation middleware
 func (sh *strictHandler) GetFavorites(w http.ResponseWriter, r *http.Request) {
 	var request GetFavoritesRequestObject
@@ -2609,30 +2595,25 @@ func (sh *strictHandler) AddFavorite(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// UnfollowArtist operation middleware
-func (sh *strictHandler) UnfollowArtist(w http.ResponseWriter, r *http.Request) {
-	var request UnfollowArtistRequestObject
+// RemoveFavorite operation middleware
+func (sh *strictHandler) RemoveFavorite(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request RemoveFavoriteRequestObject
 
-	var body UnfollowArtistJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
+	request.Id = id
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.UnfollowArtist(ctx, request.(UnfollowArtistRequestObject))
+		return sh.ssi.RemoveFavorite(ctx, request.(RemoveFavoriteRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "UnfollowArtist")
+		handler = middleware(handler, "RemoveFavorite")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(UnfollowArtistResponseObject); ok {
-		if err := validResponse.VisitUnfollowArtistResponse(w); err != nil {
+	} else if validResponse, ok := response.(RemoveFavoriteResponseObject); ok {
+		if err := validResponse.VisitRemoveFavoriteResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2688,6 +2669,32 @@ func (sh *strictHandler) FollowArtist(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(FollowArtistResponseObject); ok {
 		if err := validResponse.VisitFollowArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnfollowArtist operation middleware
+func (sh *strictHandler) UnfollowArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	var request UnfollowArtistRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UnfollowArtist(ctx, request.(UnfollowArtistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnfollowArtist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UnfollowArtistResponseObject); ok {
+		if err := validResponse.VisitUnfollowArtistResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2885,39 +2892,6 @@ func (sh *strictHandler) UpdatePlaylist(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-// RemoveSongFromPlaylist operation middleware
-func (sh *strictHandler) RemoveSongFromPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	var request RemoveSongFromPlaylistRequestObject
-
-	request.Id = id
-
-	var body RemoveSongFromPlaylistJSONRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-		return
-	}
-	request.Body = &body
-
-	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.RemoveSongFromPlaylist(ctx, request.(RemoveSongFromPlaylistRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RemoveSongFromPlaylist")
-	}
-
-	response, err := handler(r.Context(), w, r, request)
-
-	if err != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(RemoveSongFromPlaylistResponseObject); ok {
-		if err := validResponse.VisitRemoveSongFromPlaylistResponse(w); err != nil {
-			sh.options.ResponseErrorHandlerFunc(w, r, err)
-		}
-	} else if response != nil {
-		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
-	}
-}
-
 // GetPlaylistSongs operation middleware
 func (sh *strictHandler) GetPlaylistSongs(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	var request GetPlaylistSongsRequestObject
@@ -2970,6 +2944,33 @@ func (sh *strictHandler) AddSongToPlaylist(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AddSongToPlaylistResponseObject); ok {
 		if err := validResponse.VisitAddSongToPlaylistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveSongFromPlaylist operation middleware
+func (sh *strictHandler) RemoveSongFromPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, songId openapi_types.UUID) {
+	var request RemoveSongFromPlaylistRequestObject
+
+	request.Id = id
+	request.SongId = songId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveSongFromPlaylist(ctx, request.(RemoveSongFromPlaylistRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveSongFromPlaylist")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveSongFromPlaylistResponseObject); ok {
+		if err := validResponse.VisitRemoveSongFromPlaylistResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

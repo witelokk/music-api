@@ -85,23 +85,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /favorites/{id}:
     delete:
       tags: [Favorites]
       summary: Remove song from favorites
       operationId: removeFavorite
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FavoriteSongRequest'
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '204':
           description: Song removed from favorites.
         '400':
-          description: Invalid request body.
+          description: Invalid path parameter.
           content:
             application/json:
               schema:
@@ -174,23 +176,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /followings/{id}:
     delete:
       tags: [Followings]
       summary: Unfollow an artist
       operationId: unfollowArtist
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FollowArtistRequest'
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '204':
           description: Artist unfollowed.
         '400':
-          description: Invalid request body.
+          description: Invalid path parameter.
           content:
             application/json:
               schema:
@@ -711,6 +715,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /playlists/{id}/songs/{songId}:
     delete:
       tags: [Playlists]
       summary: Remove song from playlist
@@ -724,17 +729,17 @@ paths:
           schema:
             type: string
             format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RemoveSongFromPlaylistRequest'
+        - in: path
+          name: songId
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '204':
           description: Song removed from playlist.
         '400':
-          description: Invalid request body.
+          description: Invalid path parameter.
           content:
             application/json:
               schema:

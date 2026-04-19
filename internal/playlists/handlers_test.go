@@ -225,19 +225,22 @@ func TestHandleAddSongToPlaylist_BadBody(t *testing.T) {
 	}
 }
 
-func TestHandleRemoveSongFromPlaylist_BadBody(t *testing.T) {
+func TestHandleRemoveSongFromPlaylist_Success(t *testing.T) {
 	logger := newTestLogger()
 	repo := &fakePlaylistsRepo{}
 	svc := NewPlaylistsService(repo)
 
 	ctx := auth.WithUserID(context.Background(), "user-id")
 
-	resp, err := HandleRemoveSongFromPlaylist(ctx, svc, logger, openapi.RemoveSongFromPlaylistRequestObject{})
+	resp, err := HandleRemoveSongFromPlaylist(ctx, svc, logger, openapi.RemoveSongFromPlaylistRequestObject{
+		Id:     openapi_types.UUID(uuid.New()),
+		SongId: openapi_types.UUID(uuid.New()),
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, ok := resp.(openapi.RemoveSongFromPlaylist400JSONResponse); !ok {
-		t.Fatalf("expected 400 response, got %T", resp)
+	if _, ok := resp.(openapi.RemoveSongFromPlaylist204Response); !ok {
+		t.Fatalf("expected 204 response, got %T", resp)
 	}
 }

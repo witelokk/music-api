@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 )
@@ -82,18 +84,20 @@ func TestHandleAddFavorite_BadBody(t *testing.T) {
 	}
 }
 
-func TestHandleRemoveFavorite_BadBody(t *testing.T) {
+func TestHandleRemoveFavorite_Success(t *testing.T) {
 	logger := newTestLogger()
 	svc := NewFavoritesService(&fakeFavoritesRepo{})
 
 	ctx := auth.WithUserID(context.Background(), "user-id")
 
-	resp, err := HandleRemoveFavorite(ctx, svc, logger, openapi.RemoveFavoriteRequestObject{})
+	resp, err := HandleRemoveFavorite(ctx, svc, logger, openapi.RemoveFavoriteRequestObject{
+		Id: openapi_types.UUID(uuid.New()),
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, ok := resp.(openapi.RemoveFavorite400JSONResponse); !ok {
-		t.Fatalf("expected 400 response, got %T", resp)
+	if _, ok := resp.(openapi.RemoveFavorite204Response); !ok {
+		t.Fatalf("expected 204 response, got %T", resp)
 	}
 }
