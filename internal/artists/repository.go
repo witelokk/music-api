@@ -38,7 +38,16 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	`
 
 	const popularSongsQuery = `
-		SELECT s.id, s.name, s.cover_media_id, s.duration, s.stream_media_id
+		SELECT s.id,
+		       s.name,
+		       s.cover_media_id,
+		       s.duration,
+		       s.stream_media_id,
+		       EXISTS (
+		         SELECT 1
+		         FROM favorites f
+		         WHERE f.song_id = s.id AND f.user_id = $2
+		       ) AS is_favorite
 		FROM song_artists sa
 		JOIN songs s ON s.id = sa.song_id
 		WHERE sa.artist_id = $1
@@ -93,7 +102,7 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 		return nil, 0, false, err
 	}
 
-	popRows, err := tx.Query(ctx, popularSongsQuery, id)
+	popRows, err := tx.Query(ctx, popularSongsQuery, id, userID)
 	if err != nil {
 		return nil, 0, false, err
 	}
@@ -107,8 +116,9 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 			coverMediaID  *string
 			duration      int
 			streamMediaID string
+			isFavorite    bool
 		)
-		if err := popRows.Scan(&songID, &songName, &coverMediaID, &duration, &streamMediaID); err != nil {
+		if err := popRows.Scan(&songID, &songName, &coverMediaID, &duration, &streamMediaID, &isFavorite); err != nil {
 			return nil, 0, false, err
 		}
 		popular = append(popular, PopularSong{
@@ -117,6 +127,7 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 			CoverMediaID:    coverMediaID,
 			DurationSeconds: duration,
 			StreamMediaID:   streamMediaID,
+			IsFavorite:      isFavorite,
 		})
 	}
 	if err := popRows.Err(); err != nil {

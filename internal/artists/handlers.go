@@ -60,7 +60,7 @@ func HandleGetArtist(
 			Name:            s.Name,
 			DurationSeconds: s.DurationSeconds,
 			StreamUrl:       mediaurl.Build(s.StreamMediaID),
-			IsFavorite:      false,
+			IsFavorite:      s.IsFavorite,
 			Artists:         songArtists,
 		}
 		if s.CoverMediaID != nil && *s.CoverMediaID != "" {
