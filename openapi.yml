@@ -550,6 +550,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - in: query
+          name: include_songs
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Playlist details.
@@ -1179,7 +1185,6 @@ components:
         - id
         - name
         - songs_count
-        - songs
 
     PlaylistSummary:
       type: object

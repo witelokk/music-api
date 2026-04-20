@@ -110,7 +110,20 @@ func HandleGetPlaylist(
 
 	playlistID := req.Id.String()
 
-	pl, songs, err := playlistsService.GetPlaylistWithSongs(ctx, userID, playlistID)
+	includeSongs := req.Params.IncludeSongs != nil && *req.Params.IncludeSongs
+
+	var (
+		pl        *Playlist
+		songs     []PlaylistSong
+		err       error
+		respSongs *openapi.SongList
+	)
+
+	if includeSongs {
+		pl, songs, err = playlistsService.GetPlaylistWithSongs(ctx, userID, playlistID)
+	} else {
+		pl, err = playlistsService.GetPlaylist(ctx, userID, playlistID)
+	}
 	if err != nil {
 		if errors.Is(err, ErrPlaylistNotFound) {
 			return openapi.GetPlaylist404JSONResponse(openapi.Error{Error: "playlist not found"}), nil
@@ -124,34 +137,40 @@ func HandleGetPlaylist(
 		return openapi.GetPlaylist500JSONResponse(openapi.Error{Error: "failed to fetch playlist"}), nil
 	}
 
-	respSongs := make([]openapi.Song, 0, len(songs))
-	for _, sng := range songs {
-		artistSummaries := make([]openapi.ArtistSummary, 0, len(sng.Artists))
-		for _, a := range sng.Artists {
-			summary := openapi.ArtistSummary{
-				Id:   uuid.MustParse(a.ID),
-				Name: a.Name,
+	if includeSongs {
+		items := make([]openapi.Song, 0, len(songs))
+		for _, sng := range songs {
+			artistSummaries := make([]openapi.ArtistSummary, 0, len(sng.Artists))
+			for _, a := range sng.Artists {
+				summary := openapi.ArtistSummary{
+					Id:   uuid.MustParse(a.ID),
+					Name: a.Name,
+				}
+				if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+					avatarURL := mediaurl.Build(*a.AvatarMediaID)
+					summary.AvatarUrl = &avatarURL
+				}
+				artistSummaries = append(artistSummaries, summary)
 			}
-			if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
-				avatarURL := mediaurl.Build(*a.AvatarMediaID)
-				summary.AvatarUrl = &avatarURL
-			}
-			artistSummaries = append(artistSummaries, summary)
-		}
 
-		resp := openapi.Song{
-			Id:              uuid.MustParse(sng.ID),
-			Name:            sng.Name,
-			DurationSeconds: sng.DurationSeconds,
-			StreamUrl:       mediaurl.Build(sng.StreamMediaID),
-			IsFavorite:      sng.IsFavorite,
-			Artists:         artistSummaries,
+			resp := openapi.Song{
+				Id:              uuid.MustParse(sng.ID),
+				Name:            sng.Name,
+				DurationSeconds: sng.DurationSeconds,
+				StreamUrl:       mediaurl.Build(sng.StreamMediaID),
+				IsFavorite:      sng.IsFavorite,
+				Artists:         artistSummaries,
+			}
+			if sng.CoverMediaID != nil && *sng.CoverMediaID != "" {
+				coverURL := mediaurl.Build(*sng.CoverMediaID)
+				resp.CoverUrl = &coverURL
+			}
+			items = append(items, resp)
 		}
-		if sng.CoverMediaID != nil && *sng.CoverMediaID != "" {
-			coverURL := mediaurl.Build(*sng.CoverMediaID)
-			resp.CoverUrl = &coverURL
+		respSongs = &openapi.SongList{
+			Count: len(items),
+			Songs: items,
 		}
-		respSongs = append(respSongs, resp)
 	}
 
 	var coverURL *string
@@ -165,10 +184,7 @@ func HandleGetPlaylist(
 		Name:       pl.Name,
 		CoverUrl:   coverURL,
 		SongsCount: pl.SongsCount,
-		Songs: openapi.SongList{
-			Count: len(respSongs),
-			Songs: respSongs,
-		},
+		Songs:      respSongs,
 	}), nil
 }
 

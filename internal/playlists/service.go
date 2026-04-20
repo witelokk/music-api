@@ -72,7 +72,7 @@ func (s *PlaylistsService) GetPlaylistWithSongs(ctx context.Context, userID, pla
 	if err != nil {
 		return nil, nil, err
 	}
-	songs, err := s.GetPlaylistSongs(ctx, userID, playlistID)
+	songs, err := s.repo.GetPlaylistSongs(ctx, userID, playlistID)
 	if err != nil {
 		return nil, nil, err
 	}

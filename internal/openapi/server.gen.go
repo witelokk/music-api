@@ -301,7 +301,7 @@ type Playlist struct {
 	CoverUrl   *string            `json:"cover_url,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 	Name       string             `json:"name"`
-	Songs      SongList           `json:"songs"`
+	Songs      *SongList          `json:"songs,omitempty"`
 	SongsCount int                `json:"songs_count"`
 }
 
@@ -411,6 +411,11 @@ type User struct {
 	Email     openapi_types.Email `json:"email"`
 	Id        openapi_types.UUID  `json:"id"`
 	Name      string              `json:"name"`
+}
+
+// GetPlaylistParams defines parameters for GetPlaylist.
+type GetPlaylistParams struct {
+	IncludeSongs *bool `form:"include_songs,omitempty" json:"include_songs,omitempty"`
 }
 
 // SearchParams defines parameters for Search.
@@ -637,7 +642,7 @@ type ServerInterface interface {
 	DeletePlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get playlist by ID
 	// (GET /playlists/{id})
-	GetPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	GetPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetPlaylistParams)
 	// Update a playlist
 	// (PUT /playlists/{id})
 	UpdatePlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -997,8 +1002,19 @@ func (siw *ServerInterfaceWrapper) GetPlaylist(w http.ResponseWriter, r *http.Re
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPlaylistParams
+
+	// ------------- Optional query parameter "include_songs" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_songs", r.URL.Query(), &params.IncludeSongs, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_songs", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPlaylist(w, r, id)
+		siw.Handler.GetPlaylist(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1956,7 +1972,8 @@ func (response DeletePlaylist500JSONResponse) VisitDeletePlaylistResponse(w http
 }
 
 type GetPlaylistRequestObject struct {
-	Id openapi_types.UUID `json:"id"`
+	Id     openapi_types.UUID `json:"id"`
+	Params GetPlaylistParams
 }
 
 type GetPlaylistResponseObject interface {
@@ -2834,10 +2851,11 @@ func (sh *strictHandler) DeletePlaylist(w http.ResponseWriter, r *http.Request, 
 }
 
 // GetPlaylist operation middleware
-func (sh *strictHandler) GetPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (sh *strictHandler) GetPlaylist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetPlaylistParams) {
 	var request GetPlaylistRequestObject
 
 	request.Id = id
+	request.Params = params
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.GetPlaylist(ctx, request.(GetPlaylistRequestObject))

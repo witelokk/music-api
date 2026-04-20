@@ -142,6 +142,9 @@ func TestHandleGetPlaylist_Success(t *testing.T) {
 	ctx := auth.WithUserID(context.Background(), "user-id")
 	req := openapi.GetPlaylistRequestObject{
 		Id: openapi_types.UUID(playlistID),
+		Params: openapi.GetPlaylistParams{
+			IncludeSongs: boolPtr(true),
+		},
 	}
 
 	resp, err := HandleGetPlaylist(ctx, svc, logger, req)
@@ -164,6 +167,47 @@ func TestHandleGetPlaylist_Success(t *testing.T) {
 	}
 	if len(okResp.Songs.Songs[0].Artists) != 1 {
 		t.Fatalf("expected 1 artist, got %d", len(okResp.Songs.Songs[0].Artists))
+	}
+}
+
+func TestHandleGetPlaylist_WithoutSongs(t *testing.T) {
+	logger := newTestLogger()
+	playlistID := uuid.New()
+
+	repo := &fakePlaylistsRepo{
+		playlist: &Playlist{
+			ID:         playlistID.String(),
+			UserID:     "user-id",
+			Name:       "My playlist",
+			SongsCount: 1,
+		},
+		songs: []PlaylistSong{
+			{
+				ID:              uuid.New().String(),
+				Name:            "Song",
+				DurationSeconds: 120,
+				StreamMediaID:   "stream-id",
+			},
+		},
+	}
+	svc := NewPlaylistsService(repo)
+
+	ctx := auth.WithUserID(context.Background(), "user-id")
+	req := openapi.GetPlaylistRequestObject{
+		Id: openapi_types.UUID(playlistID),
+	}
+
+	resp, err := HandleGetPlaylist(ctx, svc, logger, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	okResp, ok := resp.(openapi.GetPlaylist200JSONResponse)
+	if !ok {
+		t.Fatalf("expected 200 response, got %T", resp)
+	}
+	if okResp.Songs != nil {
+		t.Fatalf("expected songs to be omitted, got %+v", okResp.Songs)
 	}
 }
 
@@ -311,4 +355,8 @@ func TestHandleRemoveSongFromPlaylist_SongNotFound(t *testing.T) {
 	if _, ok := resp.(openapi.RemoveSongFromPlaylist404JSONResponse); !ok {
 		t.Fatalf("expected 404 response, got %T", resp)
 	}
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
