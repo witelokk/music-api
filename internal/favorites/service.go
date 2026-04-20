@@ -1,6 +1,11 @@
 package favorites
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrSongNotFound = errors.New("song not found")
 
 type FavoritesService struct {
 	repo Repository

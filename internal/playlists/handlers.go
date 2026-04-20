@@ -328,8 +328,8 @@ func HandleAddSongToPlaylist(
 	}
 
 	if err := playlistsService.AddSongToPlaylist(ctx, userID, playlistID, songID); err != nil {
-		if errors.Is(err, ErrPlaylistNotFound) {
-			return openapi.AddSongToPlaylist404JSONResponse(openapi.Error{Error: "playlist not found"}), nil
+		if errors.Is(err, ErrPlaylistNotFound) || errors.Is(err, ErrSongNotFound) {
+			return openapi.AddSongToPlaylist404JSONResponse(openapi.Error{Error: "playlist or song not found"}), nil
 		}
 
 		reqLogger.Error("failed to add song to playlist",
@@ -361,8 +361,8 @@ func HandleRemoveSongFromPlaylist(
 	songID := req.SongId.String()
 
 	if err := playlistsService.RemoveSongFromPlaylist(ctx, userID, playlistID, songID); err != nil {
-		if errors.Is(err, ErrPlaylistNotFound) {
-			return openapi.RemoveSongFromPlaylist404JSONResponse(openapi.Error{Error: "playlist not found"}), nil
+		if errors.Is(err, ErrPlaylistNotFound) || errors.Is(err, ErrSongNotFound) {
+			return openapi.RemoveSongFromPlaylist404JSONResponse(openapi.Error{Error: "playlist or song not found"}), nil
 		}
 
 		reqLogger.Error("failed to remove song from playlist",

@@ -2,6 +2,7 @@ package playlists
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -53,7 +54,7 @@ func (r *PostgresPlaylistsRepository) UpdatePlaylist(ctx context.Context, userID
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return ErrPlaylistNotFound
 	}
 	return nil
 }
@@ -69,7 +70,7 @@ func (r *PostgresPlaylistsRepository) DeletePlaylist(ctx context.Context, userID
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return ErrPlaylistNotFound
 	}
 	return nil
 }
@@ -144,8 +145,8 @@ func (r *PostgresPlaylistsRepository) GetPlaylist(ctx context.Context, userID, p
 
 	if err := r.pool.QueryRow(ctx, query, playlistID, userID).
 		Scan(&id, &ownerID, &name, &createdAt, &coverMediaID, &songsCount); err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrPlaylistNotFound
 		}
 		return nil, err
 	}
@@ -247,8 +248,9 @@ func (r *PostgresPlaylistsRepository) GetPlaylistSongs(ctx context.Context, user
 func (r *PostgresPlaylistsRepository) AddSongToPlaylist(ctx context.Context, userID, playlistID, songID string) error {
 	const query = `
 		INSERT INTO playlist_songs (playlist_id, song_id, added_at)
-		SELECT p.id, $3, NOW()
+		SELECT p.id, s.id, NOW()
 		FROM playlists p
+		JOIN songs s ON s.id = $3
 		WHERE p.id = $1 AND p.user_id = $2
 		ON CONFLICT (playlist_id, song_id) DO NOTHING
 	`
@@ -258,7 +260,7 @@ func (r *PostgresPlaylistsRepository) AddSongToPlaylist(ctx context.Context, use
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return r.classifyPlaylistSongMutationError(ctx, userID, playlistID, songID)
 	}
 	return nil
 }
@@ -278,7 +280,62 @@ func (r *PostgresPlaylistsRepository) RemoveSongFromPlaylist(ctx context.Context
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
-		return pgx.ErrNoRows
+		return r.classifyPlaylistSongMutationError(ctx, userID, playlistID, songID)
 	}
 	return nil
+}
+
+func (r *PostgresPlaylistsRepository) classifyPlaylistSongMutationError(
+	ctx context.Context,
+	userID, playlistID, songID string,
+) error {
+	playlistExists, err := r.playlistExists(ctx, userID, playlistID)
+	if err != nil {
+		return err
+	}
+	if !playlistExists {
+		return ErrPlaylistNotFound
+	}
+
+	songExists, err := r.songExists(ctx, songID)
+	if err != nil {
+		return err
+	}
+	if !songExists {
+		return ErrSongNotFound
+	}
+
+	return nil
+}
+
+func (r *PostgresPlaylistsRepository) playlistExists(ctx context.Context, userID, playlistID string) (bool, error) {
+	const query = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM playlists
+			WHERE id = $1 AND user_id = $2
+		)
+	`
+
+	var exists bool
+	if err := r.pool.QueryRow(ctx, query, playlistID, userID).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (r *PostgresPlaylistsRepository) songExists(ctx context.Context, songID string) (bool, error) {
+	const query = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM songs
+			WHERE id = $1
+		)
+	`
+
+	var exists bool
+	if err := r.pool.QueryRow(ctx, query, songID).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
 }

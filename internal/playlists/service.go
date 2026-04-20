@@ -3,11 +3,10 @@ package playlists
 import (
 	"context"
 	"errors"
-
-	"github.com/jackc/pgx/v5"
 )
 
 var ErrPlaylistNotFound = errors.New("playlist not found")
+var ErrSongNotFound = errors.New("song not found")
 
 type PlaylistsService struct {
 	repo PlaylistsRepository
@@ -23,7 +22,7 @@ func (s *PlaylistsService) CreatePlaylist(ctx context.Context, userID, name stri
 
 func (s *PlaylistsService) UpdatePlaylist(ctx context.Context, userID, playlistID, name string) error {
 	if err := s.repo.UpdatePlaylist(ctx, userID, playlistID, name); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, ErrPlaylistNotFound) {
 			return ErrPlaylistNotFound
 		}
 		return err
@@ -33,7 +32,7 @@ func (s *PlaylistsService) UpdatePlaylist(ctx context.Context, userID, playlistI
 
 func (s *PlaylistsService) DeletePlaylist(ctx context.Context, userID, playlistID string) error {
 	if err := s.repo.DeletePlaylist(ctx, userID, playlistID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, ErrPlaylistNotFound) {
 			return ErrPlaylistNotFound
 		}
 		return err
@@ -48,7 +47,7 @@ func (s *PlaylistsService) GetPlaylists(ctx context.Context, userID string) ([]P
 func (s *PlaylistsService) GetPlaylist(ctx context.Context, userID, playlistID string) (*Playlist, error) {
 	p, err := s.repo.GetPlaylist(ctx, userID, playlistID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, ErrPlaylistNotFound) {
 			return nil, ErrPlaylistNotFound
 		}
 		return nil, err
@@ -57,11 +56,12 @@ func (s *PlaylistsService) GetPlaylist(ctx context.Context, userID, playlistID s
 }
 
 func (s *PlaylistsService) GetPlaylistSongs(ctx context.Context, userID, playlistID string) ([]PlaylistSong, error) {
+	if _, err := s.GetPlaylist(ctx, userID, playlistID); err != nil {
+		return nil, err
+	}
+
 	songs, err := s.repo.GetPlaylistSongs(ctx, userID, playlistID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrPlaylistNotFound
-		}
 		return nil, err
 	}
 	return songs, nil
@@ -81,8 +81,11 @@ func (s *PlaylistsService) GetPlaylistWithSongs(ctx context.Context, userID, pla
 
 func (s *PlaylistsService) AddSongToPlaylist(ctx context.Context, userID, playlistID, songID string) error {
 	if err := s.repo.AddSongToPlaylist(ctx, userID, playlistID, songID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, ErrPlaylistNotFound) {
 			return ErrPlaylistNotFound
+		}
+		if errors.Is(err, ErrSongNotFound) {
+			return ErrSongNotFound
 		}
 		return err
 	}
@@ -91,8 +94,11 @@ func (s *PlaylistsService) AddSongToPlaylist(ctx context.Context, userID, playli
 
 func (s *PlaylistsService) RemoveSongFromPlaylist(ctx context.Context, userID, playlistID, songID string) error {
 	if err := s.repo.RemoveSongFromPlaylist(ctx, userID, playlistID, songID); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, ErrPlaylistNotFound) {
 			return ErrPlaylistNotFound
+		}
+		if errors.Is(err, ErrSongNotFound) {
+			return ErrSongNotFound
 		}
 		return err
 	}

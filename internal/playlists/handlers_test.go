@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/witelokk/music-api/internal/auth"
 	openapi "github.com/witelokk/music-api/internal/openapi"
@@ -91,7 +90,7 @@ func TestHandleCreatePlaylist_Success(t *testing.T) {
 func TestHandleGetPlaylist_NotFound(t *testing.T) {
 	logger := newTestLogger()
 	repo := &fakePlaylistsRepo{
-		playlistErr: pgx.ErrNoRows,
+		playlistErr: ErrPlaylistNotFound,
 	}
 	svc := NewPlaylistsService(repo)
 
@@ -208,6 +207,28 @@ func TestHandleGetPlaylistSongs_Success(t *testing.T) {
 	}
 }
 
+func TestHandleGetPlaylistSongs_NotFound(t *testing.T) {
+	logger := newTestLogger()
+	repo := &fakePlaylistsRepo{
+		playlistErr: ErrPlaylistNotFound,
+	}
+	svc := NewPlaylistsService(repo)
+
+	ctx := auth.WithUserID(context.Background(), "user-id")
+	req := openapi.GetPlaylistSongsRequestObject{
+		Id: openapi_types.UUID(uuid.New()),
+	}
+
+	resp, err := HandleGetPlaylistSongs(ctx, svc, logger, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := resp.(openapi.GetPlaylistSongs404JSONResponse); !ok {
+		t.Fatalf("expected 404 response, got %T", resp)
+	}
+}
+
 func TestHandleAddSongToPlaylist_BadBody(t *testing.T) {
 	logger := newTestLogger()
 	repo := &fakePlaylistsRepo{}
@@ -242,5 +263,52 @@ func TestHandleRemoveSongFromPlaylist_Success(t *testing.T) {
 
 	if _, ok := resp.(openapi.RemoveSongFromPlaylist204Response); !ok {
 		t.Fatalf("expected 204 response, got %T", resp)
+	}
+}
+
+func TestHandleAddSongToPlaylist_SongNotFound(t *testing.T) {
+	logger := newTestLogger()
+	repo := &fakePlaylistsRepo{
+		addErr: ErrSongNotFound,
+	}
+	svc := NewPlaylistsService(repo)
+
+	ctx := auth.WithUserID(context.Background(), "user-id")
+	body := openapi.AddSongToPlaylistJSONRequestBody{
+		SongId: openapi_types.UUID(uuid.New()),
+	}
+
+	resp, err := HandleAddSongToPlaylist(ctx, svc, logger, openapi.AddSongToPlaylistRequestObject{
+		Id:   openapi_types.UUID(uuid.New()),
+		Body: &body,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := resp.(openapi.AddSongToPlaylist404JSONResponse); !ok {
+		t.Fatalf("expected 404 response, got %T", resp)
+	}
+}
+
+func TestHandleRemoveSongFromPlaylist_SongNotFound(t *testing.T) {
+	logger := newTestLogger()
+	repo := &fakePlaylistsRepo{
+		removeErr: ErrSongNotFound,
+	}
+	svc := NewPlaylistsService(repo)
+
+	ctx := auth.WithUserID(context.Background(), "user-id")
+
+	resp, err := HandleRemoveSongFromPlaylist(ctx, svc, logger, openapi.RemoveSongFromPlaylistRequestObject{
+		Id:     openapi_types.UUID(uuid.New()),
+		SongId: openapi_types.UUID(uuid.New()),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := resp.(openapi.RemoveSongFromPlaylist404JSONResponse); !ok {
+		t.Fatalf("expected 404 response, got %T", resp)
 	}
 }

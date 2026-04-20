@@ -2,6 +2,7 @@ package favorites
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -93,6 +94,10 @@ func HandleAddFavorite(
 	}
 
 	if err := favoritesService.AddFavorite(ctx, userID, songID); err != nil {
+		if errors.Is(err, ErrSongNotFound) {
+			return openapi.AddFavorite404JSONResponse(openapi.Error{Error: "song not found"}), nil
+		}
+
 		reqLogger.Error("failed to add favorite",
 			slog.String("user_id", userID),
 			slog.String("song_id", songID),
@@ -120,6 +125,10 @@ func HandleRemoveFavorite(
 	songID := req.Id.String()
 
 	if err := favoritesService.RemoveFavorite(ctx, userID, songID); err != nil {
+		if errors.Is(err, ErrSongNotFound) {
+			return openapi.RemoveFavorite404JSONResponse(openapi.Error{Error: "song not found"}), nil
+		}
+
 		reqLogger.Error("failed to remove favorite",
 			slog.String("user_id", userID),
 			slog.String("song_id", songID),

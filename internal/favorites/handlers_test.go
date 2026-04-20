@@ -101,3 +101,42 @@ func TestHandleRemoveFavorite_Success(t *testing.T) {
 		t.Fatalf("expected 204 response, got %T", resp)
 	}
 }
+
+func TestHandleAddFavorite_SongNotFound(t *testing.T) {
+	logger := newTestLogger()
+	svc := NewFavoritesService(&fakeFavoritesRepo{err: ErrSongNotFound})
+
+	ctx := auth.WithUserID(context.Background(), "user-id")
+	body := openapi.AddFavoriteJSONRequestBody{
+		SongId: openapi_types.UUID(uuid.New()),
+	}
+
+	resp, err := HandleAddFavorite(ctx, svc, logger, openapi.AddFavoriteRequestObject{
+		Body: &body,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := resp.(openapi.AddFavorite404JSONResponse); !ok {
+		t.Fatalf("expected 404 response, got %T", resp)
+	}
+}
+
+func TestHandleRemoveFavorite_SongNotFound(t *testing.T) {
+	logger := newTestLogger()
+	svc := NewFavoritesService(&fakeFavoritesRepo{err: ErrSongNotFound})
+
+	ctx := auth.WithUserID(context.Background(), "user-id")
+
+	resp, err := HandleRemoveFavorite(ctx, svc, logger, openapi.RemoveFavoriteRequestObject{
+		Id: openapi_types.UUID(uuid.New()),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if _, ok := resp.(openapi.RemoveFavorite404JSONResponse); !ok {
+		t.Fatalf("expected 404 response, got %T", resp)
+	}
+}

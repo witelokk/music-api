@@ -38,12 +38,20 @@ func NewPostgresFavoritesRepository(pool *pgxpool.Pool) *PostgresFavoritesReposi
 func (r *PostgresFavoritesRepository) AddFavorite(ctx context.Context, userID, songID string) error {
 	const query = `
 		INSERT INTO favorites (user_id, song_id, added_at)
-		VALUES ($1, $2, NOW())
+		SELECT $1, s.id, NOW()
+		FROM songs s
+		WHERE s.id = $2
 		ON CONFLICT (user_id, song_id) DO NOTHING
 	`
 
-	_, err := r.pool.Exec(ctx, query, userID, songID)
-	return err
+	cmd, err := r.pool.Exec(ctx, query, userID, songID)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return r.classifyFavoriteMutationError(ctx, songID)
+	}
+	return nil
 }
 
 func (r *PostgresFavoritesRepository) RemoveFavorite(ctx context.Context, userID, songID string) error {
@@ -52,8 +60,14 @@ func (r *PostgresFavoritesRepository) RemoveFavorite(ctx context.Context, userID
 		WHERE user_id = $1 AND song_id = $2
 	`
 
-	_, err := r.pool.Exec(ctx, query, userID, songID)
-	return err
+	cmd, err := r.pool.Exec(ctx, query, userID, songID)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return r.classifyFavoriteMutationError(ctx, songID)
+	}
+	return nil
 }
 
 func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, userID string) ([]FavoriteSong, error) {
@@ -130,4 +144,24 @@ func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, user
 	}
 
 	return result, rows.Err()
+}
+
+func (r *PostgresFavoritesRepository) classifyFavoriteMutationError(ctx context.Context, songID string) error {
+	const query = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM songs
+			WHERE id = $1
+		)
+	`
+
+	var exists bool
+	if err := r.pool.QueryRow(ctx, query, songID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return ErrSongNotFound
+	}
+
+	return nil
 }
