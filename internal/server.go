@@ -60,8 +60,8 @@ func NewServer(
 	}
 }
 
-func (s *Server) SendVerificationEmail(ctx context.Context, req openapi.SendVerificationEmailRequestObject) (openapi.SendVerificationEmailResponseObject, error) {
-	return auth.HandleSendVerificationEmail(ctx, s.authService, s.logger, req)
+func (s *Server) CreateVerificationCodeRequest(ctx context.Context, req openapi.CreateVerificationCodeRequestRequestObject) (openapi.CreateVerificationCodeRequestResponseObject, error) {
+	return auth.HandleCreateVerificationCodeRequest(ctx, s.authService, s.logger, req)
 }
 
 func (s *Server) CreateUser(ctx context.Context, req openapi.CreateUserRequestObject) (openapi.CreateUserResponseObject, error) {
@@ -152,6 +152,6 @@ func (s *Server) RemoveSongFromPlaylist(ctx context.Context, req openapi.RemoveS
 	return playlists.HandleRemoveSongFromPlaylist(ctx, s.playlistsService, s.logger, req)
 }
 
-func (s *Server) GetHomeScreenLayout(ctx context.Context, req openapi.GetHomeScreenLayoutRequestObject) (openapi.GetHomeScreenLayoutResponseObject, error) {
-	return home.HandleGetHomeScreenLayout(ctx, s.homeService, s.logger, req)
+func (s *Server) GetHomeFeed(ctx context.Context, req openapi.GetHomeFeedRequestObject) (openapi.GetHomeFeedResponseObject, error) {
+	return home.HandleGetHomeFeed(ctx, s.homeService, s.logger, req)
 }

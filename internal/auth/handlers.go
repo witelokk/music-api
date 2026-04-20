@@ -12,30 +12,30 @@ import (
 	"github.com/witelokk/music-api/internal/requestctx"
 )
 
-func HandleSendVerificationEmail(
+func HandleCreateVerificationCodeRequest(
 	ctx context.Context,
 	service *AuthService,
 	logger *slog.Logger,
-	req openapi.SendVerificationEmailRequestObject,
-) (openapi.SendVerificationEmailResponseObject, error) {
+	req openapi.CreateVerificationCodeRequestRequestObject,
+) (openapi.CreateVerificationCodeRequestResponseObject, error) {
 	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 	if req.Body == nil {
-		return openapi.SendVerificationEmail400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
+		return openapi.CreateVerificationCodeRequest400JSONResponse(openapi.Error{Error: "invalid request body"}), nil
 	}
 
 	body := req.Body
 
 	if string(body.Email) == "" {
-		return openapi.SendVerificationEmail400JSONResponse(openapi.Error{Error: "email is required"}), nil
+		return openapi.CreateVerificationCodeRequest400JSONResponse(openapi.Error{Error: "email is required"}), nil
 	}
 
 	if _, err := mail.ParseAddress(string(body.Email)); err != nil {
-		return openapi.SendVerificationEmail400JSONResponse(openapi.Error{Error: "invalid email"}), nil
+		return openapi.CreateVerificationCodeRequest400JSONResponse(openapi.Error{Error: "invalid email"}), nil
 	}
 
 	if err := service.SendVerificationEmail(ctx, string(body.Email)); err != nil {
 		if errors.Is(err, ErrVerificationCodeRecentlySent) {
-			return openapi.SendVerificationEmail429JSONResponse(openapi.Error{Error: "verification code recently sent"}), nil
+			return openapi.CreateVerificationCodeRequest429JSONResponse(openapi.Error{Error: "verification code recently sent"}), nil
 		}
 
 		reqLogger.Error("failed to send verification email",
@@ -43,10 +43,10 @@ func HandleSendVerificationEmail(
 			slog.String("error", err.Error()),
 		)
 
-		return openapi.SendVerificationEmail500JSONResponse(openapi.Error{Error: "failed to send verification email"}), nil
+		return openapi.CreateVerificationCodeRequest500JSONResponse(openapi.Error{Error: "failed to send verification email"}), nil
 	}
 
-	return openapi.SendVerificationEmail204Response{}, nil
+	return openapi.CreateVerificationCodeRequest202Response{}, nil
 }
 
 func HandleCreateUser(

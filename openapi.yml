@@ -5,7 +5,8 @@ info:
   description: API for a music streaming service
 
 servers:
-  - url: /api
+  - url: /api/v1
+    description: Current API version.
 
 tags:
   - name: Auth
@@ -212,11 +213,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /verification-code-request:
+  /verification-code-requests:
     post:
       tags: [Auth]
       summary: Send verification email
-      operationId: sendVerificationEmail
+      operationId: createVerificationCodeRequest
       requestBody:
         required: true
         content:
@@ -224,8 +225,8 @@ paths:
             schema:
               $ref: '#/components/schemas/SendVerificationEmailRequest'
       responses:
-        '204':
-          description: Verification email sent successfully.
+        '202':
+          description: Verification email request accepted.
         '400':
           description: Invalid request body or email.
           content:
@@ -816,11 +817,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /home-screen-layout:
+  /home-feed:
     get:
       tags: [Home]
       summary: Get home screen layout
-      operationId: getHomeScreenLayout
+      operationId: getHomeFeed
       security:
         - bearerAuth: []
       responses:

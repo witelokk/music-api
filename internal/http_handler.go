@@ -16,6 +16,12 @@ type HTTPHandlerConfig struct {
 	JWTSecret string
 }
 
+const (
+	apiBasePath       = "/api"
+	currentAPIVer     = "v1"
+	currentAPIBaseURL = apiBasePath + "/" + currentAPIVer
+)
+
 func NewHTTPHandler(
 	serverImpl openapi.StrictServerInterface,
 	cfg HTTPHandlerConfig,
@@ -45,7 +51,7 @@ func NewHTTPHandler(
 		},
 	)
 
-	apiHandler := openapi.HandlerFromMuxWithBaseURL(strictHandler, mux, "/api")
+	apiHandler := openapi.HandlerFromMuxWithBaseURL(strictHandler, mux, currentAPIBaseURL)
 
 	handlerWithMiddleware := NewHTTPLoggingMiddleware(logger)(
 		NewHTTPRecoveryMiddleware(logger)(
@@ -75,6 +81,10 @@ func newDocsMux() *http.ServeMux {
 		"/openapi.yml",
 		"/docs/",
 	))
+
+	mux.HandleFunc("GET "+currentAPIBaseURL, func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/", http.StatusTemporaryRedirect)
+	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {

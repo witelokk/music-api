@@ -18,20 +18,20 @@ func newTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 }
 
-func TestHandleGetHomeScreenLayout_NoUserID(t *testing.T) {
+func TestHandleGetHomeFeed_NoUserID(t *testing.T) {
 	logger := newTestLogger()
 
-	resp, err := HandleGetHomeScreenLayout(context.Background(), nil, logger, openapi.GetHomeScreenLayoutRequestObject{})
+	resp, err := HandleGetHomeFeed(context.Background(), nil, logger, openapi.GetHomeFeedRequestObject{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, ok := resp.(openapi.GetHomeScreenLayout500JSONResponse); !ok {
+	if _, ok := resp.(openapi.GetHomeFeed500JSONResponse); !ok {
 		t.Fatalf("expected 500 response, got %T", resp)
 	}
 }
 
-func TestHandleGetHomeScreenLayout_OK(t *testing.T) {
+func TestHandleGetHomeFeed_OK(t *testing.T) {
 	logger := newTestLogger()
 	playlistsRepo := &fakePlaylistsRepo{
 		playlists: []playlists.PlaylistSummary{
@@ -56,12 +56,12 @@ func TestHandleGetHomeScreenLayout_OK(t *testing.T) {
 
 	ctx := auth.WithUserID(context.Background(), "user-id")
 
-	resp, err := HandleGetHomeScreenLayout(ctx, service, logger, openapi.GetHomeScreenLayoutRequestObject{})
+	resp, err := HandleGetHomeFeed(ctx, service, logger, openapi.GetHomeFeedRequestObject{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	okResp, ok := resp.(openapi.GetHomeScreenLayout200JSONResponse)
+	okResp, ok := resp.(openapi.GetHomeFeed200JSONResponse)
 	if !ok {
 		t.Fatalf("expected 200 response, got %T", resp)
 	}

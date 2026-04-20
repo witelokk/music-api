@@ -16,18 +16,18 @@ import (
 	"github.com/witelokk/music-api/internal/requestctx"
 )
 
-func HandleGetHomeScreenLayout(
+func HandleGetHomeFeed(
 	ctx context.Context,
 	service *Service,
 	logger *slog.Logger,
-	req openapi.GetHomeScreenLayoutRequestObject,
-) (openapi.GetHomeScreenLayoutResponseObject, error) {
+	req openapi.GetHomeFeedRequestObject,
+) (openapi.GetHomeFeedResponseObject, error) {
 	_ = req
 	reqLogger := requestctx.LoggerFromContext(ctx, logger)
 
 	userID := auth.UserIDFromContext(ctx)
 	if userID == "" {
-		return openapi.GetHomeScreenLayout500JSONResponse(openapi.Error{Error: "failed to fetch home screen layout"}), nil
+		return openapi.GetHomeFeed500JSONResponse(openapi.Error{Error: "failed to fetch home screen layout"}), nil
 	}
 
 	layout, err := service.GetHomeScreenLayout(ctx, userID, time.Now())
@@ -36,7 +36,7 @@ func HandleGetHomeScreenLayout(
 			slog.String("user_id", userID),
 			slog.String("error", err.Error()),
 		)
-		return openapi.GetHomeScreenLayout500JSONResponse(openapi.Error{Error: "failed to fetch home screen layout"}), nil
+		return openapi.GetHomeFeed500JSONResponse(openapi.Error{Error: "failed to fetch home screen layout"}), nil
 	}
 
 	respPlaylists := make([]openapi.PlaylistSummary, 0, len(layout.Playlists))
@@ -96,7 +96,7 @@ func HandleGetHomeScreenLayout(
 		})
 	}
 
-	return openapi.GetHomeScreenLayout200JSONResponse(openapi.HomeScreenLayout{
+	return openapi.GetHomeFeed200JSONResponse(openapi.HomeScreenLayout{
 		Playlists: openapi.PlaylistsSummary{
 			Count:     len(respPlaylists),
 			Playlists: respPlaylists,

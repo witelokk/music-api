@@ -450,8 +450,8 @@ type GenerateTokensJSONRequestBody = GetTokensRequest
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
 
-// SendVerificationEmailJSONRequestBody defines body for SendVerificationEmail for application/json ContentType.
-type SendVerificationEmailJSONRequestBody = SendVerificationEmailRequest
+// CreateVerificationCodeRequestJSONRequestBody defines body for CreateVerificationCodeRequest for application/json ContentType.
+type CreateVerificationCodeRequestJSONRequestBody = SendVerificationEmailRequest
 
 // AsGetTokensByCodeRequest returns the union data inside the GetTokensRequest as a GetTokensByCodeRequest
 func (t GetTokensRequest) AsGetTokensByCodeRequest() (GetTokensByCodeRequest, error) {
@@ -626,8 +626,8 @@ type ServerInterface interface {
 	// (DELETE /followings/{id})
 	UnfollowArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Get home screen layout
-	// (GET /home-screen-layout)
-	GetHomeScreenLayout(w http.ResponseWriter, r *http.Request)
+	// (GET /home-feed)
+	GetHomeFeed(w http.ResponseWriter, r *http.Request)
 	// Get media file
 	// (GET /media/{id})
 	GetMedia(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -674,8 +674,8 @@ type ServerInterface interface {
 	// (GET /users/me)
 	GetCurrentUser(w http.ResponseWriter, r *http.Request)
 	// Send verification email
-	// (POST /verification-code-request)
-	SendVerificationEmail(w http.ResponseWriter, r *http.Request)
+	// (POST /verification-code-requests)
+	CreateVerificationCodeRequest(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -860,8 +860,8 @@ func (siw *ServerInterfaceWrapper) UnfollowArtist(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// GetHomeScreenLayout operation middleware
-func (siw *ServerInterfaceWrapper) GetHomeScreenLayout(w http.ResponseWriter, r *http.Request) {
+// GetHomeFeed operation middleware
+func (siw *ServerInterfaceWrapper) GetHomeFeed(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
@@ -870,7 +870,7 @@ func (siw *ServerInterfaceWrapper) GetHomeScreenLayout(w http.ResponseWriter, r 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetHomeScreenLayout(w, r)
+		siw.Handler.GetHomeFeed(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1331,11 +1331,11 @@ func (siw *ServerInterfaceWrapper) GetCurrentUser(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// SendVerificationEmail operation middleware
-func (siw *ServerInterfaceWrapper) SendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+// CreateVerificationCodeRequest operation middleware
+func (siw *ServerInterfaceWrapper) CreateVerificationCodeRequest(w http.ResponseWriter, r *http.Request) {
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SendVerificationEmail(w, r)
+		siw.Handler.CreateVerificationCodeRequest(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1472,7 +1472,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/followings", wrapper.GetFollowings)
 	m.HandleFunc("POST "+options.BaseURL+"/followings", wrapper.FollowArtist)
 	m.HandleFunc("DELETE "+options.BaseURL+"/followings/{id}", wrapper.UnfollowArtist)
-	m.HandleFunc("GET "+options.BaseURL+"/home-screen-layout", wrapper.GetHomeScreenLayout)
+	m.HandleFunc("GET "+options.BaseURL+"/home-feed", wrapper.GetHomeFeed)
 	m.HandleFunc("GET "+options.BaseURL+"/media/{id}", wrapper.GetMedia)
 	m.HandleFunc("GET "+options.BaseURL+"/playlists", wrapper.GetPlaylists)
 	m.HandleFunc("POST "+options.BaseURL+"/playlists", wrapper.CreatePlaylist)
@@ -1488,7 +1488,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
 	m.HandleFunc("POST "+options.BaseURL+"/users", wrapper.CreateUser)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetCurrentUser)
-	m.HandleFunc("POST "+options.BaseURL+"/verification-code-request", wrapper.SendVerificationEmail)
+	m.HandleFunc("POST "+options.BaseURL+"/verification-code-requests", wrapper.CreateVerificationCodeRequest)
 
 	return m
 }
@@ -1750,25 +1750,25 @@ func (response UnfollowArtist500JSONResponse) VisitUnfollowArtistResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetHomeScreenLayoutRequestObject struct {
+type GetHomeFeedRequestObject struct {
 }
 
-type GetHomeScreenLayoutResponseObject interface {
-	VisitGetHomeScreenLayoutResponse(w http.ResponseWriter) error
+type GetHomeFeedResponseObject interface {
+	VisitGetHomeFeedResponse(w http.ResponseWriter) error
 }
 
-type GetHomeScreenLayout200JSONResponse HomeScreenLayout
+type GetHomeFeed200JSONResponse HomeScreenLayout
 
-func (response GetHomeScreenLayout200JSONResponse) VisitGetHomeScreenLayoutResponse(w http.ResponseWriter) error {
+func (response GetHomeFeed200JSONResponse) VisitGetHomeFeedResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetHomeScreenLayout500JSONResponse Error
+type GetHomeFeed500JSONResponse Error
 
-func (response GetHomeScreenLayout500JSONResponse) VisitGetHomeScreenLayoutResponse(w http.ResponseWriter) error {
+func (response GetHomeFeed500JSONResponse) VisitGetHomeFeedResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -2383,43 +2383,43 @@ func (response GetCurrentUser500JSONResponse) VisitGetCurrentUserResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
-type SendVerificationEmailRequestObject struct {
-	Body *SendVerificationEmailJSONRequestBody
+type CreateVerificationCodeRequestRequestObject struct {
+	Body *CreateVerificationCodeRequestJSONRequestBody
 }
 
-type SendVerificationEmailResponseObject interface {
-	VisitSendVerificationEmailResponse(w http.ResponseWriter) error
+type CreateVerificationCodeRequestResponseObject interface {
+	VisitCreateVerificationCodeRequestResponse(w http.ResponseWriter) error
 }
 
-type SendVerificationEmail204Response struct {
+type CreateVerificationCodeRequest202Response struct {
 }
 
-func (response SendVerificationEmail204Response) VisitSendVerificationEmailResponse(w http.ResponseWriter) error {
-	w.WriteHeader(204)
+func (response CreateVerificationCodeRequest202Response) VisitCreateVerificationCodeRequestResponse(w http.ResponseWriter) error {
+	w.WriteHeader(202)
 	return nil
 }
 
-type SendVerificationEmail400JSONResponse Error
+type CreateVerificationCodeRequest400JSONResponse Error
 
-func (response SendVerificationEmail400JSONResponse) VisitSendVerificationEmailResponse(w http.ResponseWriter) error {
+func (response CreateVerificationCodeRequest400JSONResponse) VisitCreateVerificationCodeRequestResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type SendVerificationEmail429JSONResponse Error
+type CreateVerificationCodeRequest429JSONResponse Error
 
-func (response SendVerificationEmail429JSONResponse) VisitSendVerificationEmailResponse(w http.ResponseWriter) error {
+func (response CreateVerificationCodeRequest429JSONResponse) VisitCreateVerificationCodeRequestResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(429)
 
 	return json.NewEncoder(w).Encode(response)
 }
 
-type SendVerificationEmail500JSONResponse Error
+type CreateVerificationCodeRequest500JSONResponse Error
 
-func (response SendVerificationEmail500JSONResponse) VisitSendVerificationEmailResponse(w http.ResponseWriter) error {
+func (response CreateVerificationCodeRequest500JSONResponse) VisitCreateVerificationCodeRequestResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -2450,8 +2450,8 @@ type StrictServerInterface interface {
 	// (DELETE /followings/{id})
 	UnfollowArtist(ctx context.Context, request UnfollowArtistRequestObject) (UnfollowArtistResponseObject, error)
 	// Get home screen layout
-	// (GET /home-screen-layout)
-	GetHomeScreenLayout(ctx context.Context, request GetHomeScreenLayoutRequestObject) (GetHomeScreenLayoutResponseObject, error)
+	// (GET /home-feed)
+	GetHomeFeed(ctx context.Context, request GetHomeFeedRequestObject) (GetHomeFeedResponseObject, error)
 	// Get media file
 	// (GET /media/{id})
 	GetMedia(ctx context.Context, request GetMediaRequestObject) (GetMediaResponseObject, error)
@@ -2498,8 +2498,8 @@ type StrictServerInterface interface {
 	// (GET /users/me)
 	GetCurrentUser(ctx context.Context, request GetCurrentUserRequestObject) (GetCurrentUserResponseObject, error)
 	// Send verification email
-	// (POST /verification-code-request)
-	SendVerificationEmail(ctx context.Context, request SendVerificationEmailRequestObject) (SendVerificationEmailResponseObject, error)
+	// (POST /verification-code-requests)
+	CreateVerificationCodeRequest(ctx context.Context, request CreateVerificationCodeRequestRequestObject) (CreateVerificationCodeRequestResponseObject, error)
 }
 
 type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
@@ -2719,23 +2719,23 @@ func (sh *strictHandler) UnfollowArtist(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-// GetHomeScreenLayout operation middleware
-func (sh *strictHandler) GetHomeScreenLayout(w http.ResponseWriter, r *http.Request) {
-	var request GetHomeScreenLayoutRequestObject
+// GetHomeFeed operation middleware
+func (sh *strictHandler) GetHomeFeed(w http.ResponseWriter, r *http.Request) {
+	var request GetHomeFeedRequestObject
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.GetHomeScreenLayout(ctx, request.(GetHomeScreenLayoutRequestObject))
+		return sh.ssi.GetHomeFeed(ctx, request.(GetHomeFeedRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetHomeScreenLayout")
+		handler = middleware(handler, "GetHomeFeed")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(GetHomeScreenLayoutResponseObject); ok {
-		if err := validResponse.VisitGetHomeScreenLayoutResponse(w); err != nil {
+	} else if validResponse, ok := response.(GetHomeFeedResponseObject); ok {
+		if err := validResponse.VisitGetHomeFeedResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -3160,11 +3160,11 @@ func (sh *strictHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// SendVerificationEmail operation middleware
-func (sh *strictHandler) SendVerificationEmail(w http.ResponseWriter, r *http.Request) {
-	var request SendVerificationEmailRequestObject
+// CreateVerificationCodeRequest operation middleware
+func (sh *strictHandler) CreateVerificationCodeRequest(w http.ResponseWriter, r *http.Request) {
+	var request CreateVerificationCodeRequestRequestObject
 
-	var body SendVerificationEmailJSONRequestBody
+	var body CreateVerificationCodeRequestJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -3172,18 +3172,18 @@ func (sh *strictHandler) SendVerificationEmail(w http.ResponseWriter, r *http.Re
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.SendVerificationEmail(ctx, request.(SendVerificationEmailRequestObject))
+		return sh.ssi.CreateVerificationCodeRequest(ctx, request.(CreateVerificationCodeRequestRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "SendVerificationEmail")
+		handler = middleware(handler, "CreateVerificationCodeRequest")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(SendVerificationEmailResponseObject); ok {
-		if err := validResponse.VisitSendVerificationEmailResponse(w); err != nil {
+	} else if validResponse, ok := response.(CreateVerificationCodeRequestResponseObject); ok {
+		if err := validResponse.VisitCreateVerificationCodeRequestResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

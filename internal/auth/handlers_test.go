@@ -16,32 +16,32 @@ func newTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 }
 
-func TestHandleSendVerificationEmail_ValidationErrors(t *testing.T) {
+func TestHandleCreateVerificationCodeRequest_ValidationErrors(t *testing.T) {
 	svc, _, _, _, _ := newTestAuthService()
 	logger := newTestLogger()
 	ctx := context.Background()
 
 	tests := []struct {
 		name      string
-		req       openapi.SendVerificationEmailRequestObject
+		req       openapi.CreateVerificationCodeRequestRequestObject
 		wantError string
 	}{
 		{
 			name:      "nil body",
-			req:       openapi.SendVerificationEmailRequestObject{},
+			req:       openapi.CreateVerificationCodeRequestRequestObject{},
 			wantError: "invalid request body",
 		},
 		{
 			name: "missing email",
-			req: openapi.SendVerificationEmailRequestObject{
-				Body: &openapi.SendVerificationEmailJSONRequestBody{},
+			req: openapi.CreateVerificationCodeRequestRequestObject{
+				Body: &openapi.CreateVerificationCodeRequestJSONRequestBody{},
 			},
 			wantError: "email is required",
 		},
 		{
 			name: "invalid email",
-			req: openapi.SendVerificationEmailRequestObject{
-				Body: &openapi.SendVerificationEmailJSONRequestBody{
+			req: openapi.CreateVerificationCodeRequestRequestObject{
+				Body: &openapi.CreateVerificationCodeRequestJSONRequestBody{
 					Email: openapi_types.Email("not-an-email"),
 				},
 			},
@@ -51,12 +51,12 @@ func TestHandleSendVerificationEmail_ValidationErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := HandleSendVerificationEmail(ctx, svc, logger, tt.req)
+			resp, err := HandleCreateVerificationCodeRequest(ctx, svc, logger, tt.req)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			errResp, ok := resp.(openapi.SendVerificationEmail400JSONResponse)
+			errResp, ok := resp.(openapi.CreateVerificationCodeRequest400JSONResponse)
 			if !ok {
 				t.Fatalf("expected 400 response, got %T", resp)
 			}
@@ -67,24 +67,24 @@ func TestHandleSendVerificationEmail_ValidationErrors(t *testing.T) {
 	}
 }
 
-func TestHandleSendVerificationEmail_Success(t *testing.T) {
+func TestHandleCreateVerificationCodeRequest_Success(t *testing.T) {
 	svc, _, _, _, _ := newTestAuthService()
 	logger := newTestLogger()
 	ctx := context.Background()
 
-	req := openapi.SendVerificationEmailRequestObject{
-		Body: &openapi.SendVerificationEmailJSONRequestBody{
+	req := openapi.CreateVerificationCodeRequestRequestObject{
+		Body: &openapi.CreateVerificationCodeRequestJSONRequestBody{
 			Email: openapi_types.Email("user@example.com"),
 		},
 	}
 
-	resp, err := HandleSendVerificationEmail(ctx, svc, logger, req)
+	resp, err := HandleCreateVerificationCodeRequest(ctx, svc, logger, req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if _, ok := resp.(openapi.SendVerificationEmail204Response); !ok {
-		t.Fatalf("expected 204 response, got %T", resp)
+	if _, ok := resp.(openapi.CreateVerificationCodeRequest202Response); !ok {
+		t.Fatalf("expected 202 response, got %T", resp)
 	}
 }
 
