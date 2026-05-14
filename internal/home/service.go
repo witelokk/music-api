@@ -39,7 +39,7 @@ func NewService(
 	}
 }
 
-func (s *Service) GetHomeScreenLayout(ctx context.Context, userID string, now time.Time) (*Layout, error) {
+func (s *Service) GetHomeFeed(ctx context.Context, userID string, now time.Time) (*Layout, error) {
 	// Use date (UTC) as a stable seed so layout is the
 	// same during the day but changes day-to-day.
 	now = now.UTC()

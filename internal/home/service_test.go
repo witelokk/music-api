@@ -77,7 +77,7 @@ func (r *fakeReleasesRepo) GetRandomReleases(ctx context.Context, seed string, l
 	return r.releases, r.err
 }
 
-func TestService_GetHomeScreenLayout_UsesSeededRepos(t *testing.T) {
+func TestService_GetHomeFeed_UsesSeededRepos(t *testing.T) {
 	playlistsRepo := &fakePlaylistsRepo{
 		playlists: []playlists.PlaylistSummary{
 			{ID: "p1", Name: "Playlist 1"},
@@ -98,7 +98,7 @@ func TestService_GetHomeScreenLayout_UsesSeededRepos(t *testing.T) {
 	service := NewService(playlistsRepo, followingsRepo, releasesRepo)
 
 	now := time.Date(2024, 3, 15, 10, 0, 0, 0, time.UTC)
-	layout, err := service.GetHomeScreenLayout(context.Background(), "user-id", now)
+	layout, err := service.GetHomeFeed(context.Background(), "user-id", now)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

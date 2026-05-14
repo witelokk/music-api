@@ -30,7 +30,7 @@ func HandleGetHomeFeed(
 		return openapi.GetHomeFeed500JSONResponse(openapi.Error{Error: "failed to fetch home screen layout"}), nil
 	}
 
-	layout, err := service.GetHomeScreenLayout(ctx, userID, time.Now())
+	layout, err := service.GetHomeFeed(ctx, userID, time.Now())
 	if err != nil {
 		reqLogger.Error("failed to build home screen layout",
 			slog.String("user_id", userID),
@@ -96,7 +96,7 @@ func HandleGetHomeFeed(
 		})
 	}
 
-	return openapi.GetHomeFeed200JSONResponse(openapi.HomeScreenLayout{
+	return openapi.GetHomeFeed200JSONResponse(openapi.HomeFeed{
 		Playlists: openapi.PlaylistsSummary{
 			Count:     len(respPlaylists),
 			Playlists: respPlaylists,

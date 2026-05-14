@@ -283,8 +283,8 @@ type GetTokensRequest struct {
 	union json.RawMessage
 }
 
-// HomeScreenLayout defines model for HomeScreenLayout.
-type HomeScreenLayout struct {
+// HomeFeed defines model for HomeFeed.
+type HomeFeed struct {
 	FollowedArtists ArtistList          `json:"followedArtists"`
 	Playlists       PlaylistsSummary    `json:"playlists"`
 	Sections        []HomeScreenSection `json:"sections"`
@@ -1757,7 +1757,7 @@ type GetHomeFeedResponseObject interface {
 	VisitGetHomeFeedResponse(w http.ResponseWriter) error
 }
 
-type GetHomeFeed200JSONResponse HomeScreenLayout
+type GetHomeFeed200JSONResponse HomeFeed
 
 func (response GetHomeFeed200JSONResponse) VisitGetHomeFeedResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")

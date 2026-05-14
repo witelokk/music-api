@@ -830,7 +830,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HomeScreenLayout'
+                $ref: '#/components/schemas/HomeFeed'
         '500':
           description: Failed to fetch home screen layout.
           content:
@@ -1352,7 +1352,7 @@ components:
         - titles
         - releases
 
-    HomeScreenLayout:
+    HomeFeed:
       type: object
       properties:
         playlists:
