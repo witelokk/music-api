@@ -112,6 +112,10 @@ func (s *Server) UnfollowArtist(ctx context.Context, req openapi.UnfollowArtistR
 	return followings.HandleUnfollowArtist(ctx, s.followingsService, s.logger, req)
 }
 
+func (s *Server) GetHealth(ctx context.Context, req openapi.GetHealthRequestObject) (openapi.GetHealthResponseObject, error) {
+	return HandleGetHealth(ctx, req)
+}
+
 func (s *Server) GetMedia(ctx context.Context, request openapi.GetMediaRequestObject) (openapi.GetMediaResponseObject, error) {
 	return media.GetMedia(ctx, s.mediaService, request)
 }

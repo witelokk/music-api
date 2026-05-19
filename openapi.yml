@@ -29,8 +29,19 @@ tags:
     description: Endpoints for searching songs, artists, releases and playlists.
   - name: Home
     description: Endpoints for home screen layout.
+  - name: Health
+    description: Endpoint for service health checks.
 
 paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Get service health
+      operationId: getHealth
+      responses:
+        '204':
+          description: Service is healthy.
+
   /favorites:
     get:
       tags: [Favorites]

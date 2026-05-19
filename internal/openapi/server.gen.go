@@ -625,6 +625,9 @@ type ServerInterface interface {
 	// Unfollow an artist
 	// (DELETE /followings/{id})
 	UnfollowArtist(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Get service health
+	// (GET /health)
+	GetHealth(w http.ResponseWriter, r *http.Request)
 	// Get home screen layout
 	// (GET /home-feed)
 	GetHomeFeed(w http.ResponseWriter, r *http.Request)
@@ -851,6 +854,20 @@ func (siw *ServerInterfaceWrapper) UnfollowArtist(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnfollowArtist(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1472,6 +1489,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/followings", wrapper.GetFollowings)
 	m.HandleFunc("POST "+options.BaseURL+"/followings", wrapper.FollowArtist)
 	m.HandleFunc("DELETE "+options.BaseURL+"/followings/{id}", wrapper.UnfollowArtist)
+	m.HandleFunc("GET "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc("GET "+options.BaseURL+"/home-feed", wrapper.GetHomeFeed)
 	m.HandleFunc("GET "+options.BaseURL+"/media/{id}", wrapper.GetMedia)
 	m.HandleFunc("GET "+options.BaseURL+"/playlists", wrapper.GetPlaylists)
@@ -1748,6 +1766,21 @@ func (response UnfollowArtist500JSONResponse) VisitUnfollowArtistResponse(w http
 	w.WriteHeader(500)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type GetHealthRequestObject struct {
+}
+
+type GetHealthResponseObject interface {
+	VisitGetHealthResponse(w http.ResponseWriter) error
+}
+
+type GetHealth204Response struct {
+}
+
+func (response GetHealth204Response) VisitGetHealthResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
 }
 
 type GetHomeFeedRequestObject struct {
@@ -2449,6 +2482,9 @@ type StrictServerInterface interface {
 	// Unfollow an artist
 	// (DELETE /followings/{id})
 	UnfollowArtist(ctx context.Context, request UnfollowArtistRequestObject) (UnfollowArtistResponseObject, error)
+	// Get service health
+	// (GET /health)
+	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
 	// Get home screen layout
 	// (GET /home-feed)
 	GetHomeFeed(ctx context.Context, request GetHomeFeedRequestObject) (GetHomeFeedResponseObject, error)
@@ -2712,6 +2748,30 @@ func (sh *strictHandler) UnfollowArtist(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnfollowArtistResponseObject); ok {
 		if err := validResponse.VisitUnfollowArtistResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetHealth operation middleware
+func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
+	var request GetHealthRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetHealth(ctx, request.(GetHealthRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetHealth")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetHealthResponseObject); ok {
+		if err := validResponse.VisitGetHealthResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -82,3 +82,29 @@ func TestJWTMiddleware_ValidToken_PopulatesContextAndCallsNext(t *testing.T) {
 		t.Fatalf("expected user ID %q in context, got %q", "user-id", gotUserID)
 	}
 }
+
+func TestJWTMiddleware_PublicOperation_DoesNotRequireAuthorization(t *testing.T) {
+	logger := newTestLogger()
+
+	mw := NewJWTMiddleware("test-secret", logger)
+
+	called := false
+	next := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		called = true
+		return nil, nil
+	}
+
+	handler := mw(next, "GetHealth")
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+
+	_, err := handler(context.Background(), w, req, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !called {
+		t.Fatalf("expected next handler to be called")
+	}
+}
