@@ -48,7 +48,7 @@ type Config struct {
 	} `yaml:"minio"`
 
 	Media struct {
-		BasePath string `env:"MEDIA_BASE_PATH" yaml:"media.base_path" env-default:"/media"`
+		BasePath string `env:"MEDIA_BASE_PATH" yaml:"media.base_path" env-default:"/api/v1/media"`
 	} `yaml:"media"`
 
 	Logger struct {

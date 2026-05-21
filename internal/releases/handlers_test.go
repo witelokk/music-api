@@ -83,8 +83,8 @@ func TestHandleGetRelease_Success(t *testing.T) {
 	if len(okResp.Songs.Songs) != 1 {
 		t.Fatalf("expected 1 song, got %d", len(okResp.Songs.Songs))
 	}
-	if okResp.Songs.Songs[0].StreamUrl != "/media/stream-id" {
-		t.Fatalf("expected stream url %q, got %q", "/media/stream-id", okResp.Songs.Songs[0].StreamUrl)
+	if okResp.Songs.Songs[0].StreamUrl != "/api/v1/media/stream-id" {
+		t.Fatalf("expected stream url %q, got %q", "/api/v1/media/stream-id", okResp.Songs.Songs[0].StreamUrl)
 	}
 	if !okResp.Songs.Songs[0].IsFavorite {
 		t.Fatalf("expected song to be favorite")

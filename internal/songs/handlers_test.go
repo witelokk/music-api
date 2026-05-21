@@ -65,8 +65,8 @@ func TestHandleGetSong_Success(t *testing.T) {
 	if okResp.Name != song.Name {
 		t.Fatalf("expected name %q, got %q", song.Name, okResp.Name)
 	}
-	if okResp.StreamUrl != "/media/stream-id" {
-		t.Fatalf("expected stream url %q, got %q", "/media/stream-id", okResp.StreamUrl)
+	if okResp.StreamUrl != "/api/v1/media/stream-id" {
+		t.Fatalf("expected stream url %q, got %q", "/api/v1/media/stream-id", okResp.StreamUrl)
 	}
 	if !okResp.IsFavorite {
 		t.Fatalf("expected IsFavorite to be true")
