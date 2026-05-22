@@ -3,6 +3,7 @@ package favorites
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -44,14 +45,31 @@ func (r *PostgresFavoritesRepository) AddFavorite(ctx context.Context, userID, s
 		ON CONFLICT (user_id, song_id) DO NOTHING
 	`
 
-	cmd, err := r.pool.Exec(ctx, query, userID, songID)
+	const event_query = `
+		INSERT INTO user_events (user_id, event_type, song_id, event_time)
+		VALUES ($1, 'song_favorite', $2, NOW())
+	`
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	cmd, err := tx.Exec(ctx, query, userID, songID)
 	if err != nil {
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
 		return r.classifyFavoriteMutationError(ctx, songID)
 	}
-	return nil
+
+	_, err = tx.Exec(ctx, event_query, userID, songID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *PostgresFavoritesRepository) RemoveFavorite(ctx context.Context, userID, songID string) error {
@@ -60,14 +78,31 @@ func (r *PostgresFavoritesRepository) RemoveFavorite(ctx context.Context, userID
 		WHERE user_id = $1 AND song_id = $2
 	`
 
-	cmd, err := r.pool.Exec(ctx, query, userID, songID)
+	const event_query = `
+		INSERT INTO user_events (user_id, event_type, song_id, event_time)
+		VALUES ($1, 'song_unfavorite', $2, NOW())
+	`
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	cmd, err := tx.Exec(ctx, query, userID, songID)
 	if err != nil {
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
 		return r.classifyFavoriteMutationError(ctx, songID)
 	}
-	return nil
+
+	_, err = tx.Exec(ctx, event_query, userID, songID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *PostgresFavoritesRepository) GetFavoriteSongs(ctx context.Context, userID string) ([]FavoriteSong, error) {

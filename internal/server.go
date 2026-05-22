@@ -8,14 +8,15 @@ import (
 	"github.com/witelokk/music-api/internal/artists"
 	"github.com/witelokk/music-api/internal/auth"
 	"github.com/witelokk/music-api/internal/favorites"
-	"github.com/witelokk/music-api/internal/home"
 	"github.com/witelokk/music-api/internal/followings"
+	"github.com/witelokk/music-api/internal/home"
 	"github.com/witelokk/music-api/internal/media"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/playlists"
-	"github.com/witelokk/music-api/internal/search"
 	"github.com/witelokk/music-api/internal/releases"
+	"github.com/witelokk/music-api/internal/search"
 	"github.com/witelokk/music-api/internal/songs"
+	"github.com/witelokk/music-api/internal/userevents"
 )
 
 type Server struct {
@@ -29,6 +30,7 @@ type Server struct {
 	mediaService      *media.MediaService
 	playlistsService  *playlists.PlaylistsService
 	searchService     *search.Service
+	userEventsService *userevents.UserEventsService
 	logger            *slog.Logger
 }
 
@@ -43,6 +45,7 @@ func NewServer(
 	mediaService *media.MediaService,
 	playlistsService *playlists.PlaylistsService,
 	searchService *search.Service,
+	userEventsService *userevents.UserEventsService,
 	logger *slog.Logger,
 ) openapi.StrictServerInterface {
 	return &Server{
@@ -56,6 +59,7 @@ func NewServer(
 		mediaService:      mediaService,
 		playlistsService:  playlistsService,
 		searchService:     searchService,
+		userEventsService: userEventsService,
 		logger:            logger,
 	}
 }
@@ -158,4 +162,8 @@ func (s *Server) RemoveSongFromPlaylist(ctx context.Context, req openapi.RemoveS
 
 func (s *Server) GetHomeFeed(ctx context.Context, req openapi.GetHomeFeedRequestObject) (openapi.GetHomeFeedResponseObject, error) {
 	return home.HandleGetHomeFeed(ctx, s.homeService, s.logger, req)
+}
+
+func (s *Server) RecordUserEvent(ctx context.Context, request openapi.RecordUserEventRequestObject) (openapi.RecordUserEventResponseObject, error) {
+	return userevents.HandleRecordUserEvent(ctx, s.userEventsService, s.logger, request)
 }

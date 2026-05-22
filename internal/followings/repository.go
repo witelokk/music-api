@@ -3,6 +3,7 @@ package followings
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -33,8 +34,31 @@ func (r *PostgresFollowingsRepository) Follow(ctx context.Context, userID, artis
 		ON CONFLICT (user_id, artist_id) DO NOTHING
 	`
 
-	_, err := r.pool.Exec(ctx, query, userID, artistID)
-	return err
+	const event_query = `
+		INSERT INTO user_events (user_id, event_type, artist_id, event_time)
+		VALUES ($1, 'artist_follow', $2, NOW())
+	`
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	cmd, err := tx.Exec(ctx, query, userID, artistID)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return tx.Commit(ctx)
+	}
+
+	_, err = tx.Exec(ctx, event_query, userID, artistID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *PostgresFollowingsRepository) Unfollow(ctx context.Context, userID, artistID string) error {
@@ -43,8 +67,31 @@ func (r *PostgresFollowingsRepository) Unfollow(ctx context.Context, userID, art
 		WHERE user_id = $1 AND artist_id = $2
 	`
 
-	_, err := r.pool.Exec(ctx, query, userID, artistID)
-	return err
+	const event_query = `
+		INSERT INTO user_events (user_id, event_type, artist_id, event_time)
+		VALUES ($1, 'artist_unfollow', $2, NOW())
+	`
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	cmd, err := tx.Exec(ctx, query, userID, artistID)
+	if err != nil {
+		return err
+	}
+	if cmd.RowsAffected() == 0 {
+		return tx.Commit(ctx)
+	}
+
+	_, err = tx.Exec(ctx, event_query, userID, artistID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *PostgresFollowingsRepository) GetFollowedArtists(ctx context.Context, userID string) ([]FollowedArtist, error) {

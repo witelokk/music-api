@@ -23,6 +23,54 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// Defines values for CreateUserEventRequestContextType.
+const (
+	CreateUserEventRequestContextTypeArtist          CreateUserEventRequestContextType = "artist"
+	CreateUserEventRequestContextTypePlaylist        CreateUserEventRequestContextType = "playlist"
+	CreateUserEventRequestContextTypeQueue           CreateUserEventRequestContextType = "queue"
+	CreateUserEventRequestContextTypeRecommendations CreateUserEventRequestContextType = "recommendations"
+	CreateUserEventRequestContextTypeRelease         CreateUserEventRequestContextType = "release"
+)
+
+// Valid indicates whether the value is a known member of the CreateUserEventRequestContextType enum.
+func (e CreateUserEventRequestContextType) Valid() bool {
+	switch e {
+	case CreateUserEventRequestContextTypeArtist:
+		return true
+	case CreateUserEventRequestContextTypePlaylist:
+		return true
+	case CreateUserEventRequestContextTypeQueue:
+		return true
+	case CreateUserEventRequestContextTypeRecommendations:
+		return true
+	case CreateUserEventRequestContextTypeRelease:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateUserEventRequestEventType.
+const (
+	SongComplete CreateUserEventRequestEventType = "song_complete"
+	SongPlay     CreateUserEventRequestEventType = "song_play"
+	SongSkip     CreateUserEventRequestEventType = "song_skip"
+)
+
+// Valid indicates whether the value is a known member of the CreateUserEventRequestEventType enum.
+func (e CreateUserEventRequestEventType) Valid() bool {
+	switch e {
+	case SongComplete:
+		return true
+	case SongPlay:
+		return true
+	case SongSkip:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetTokensByAppleTokenRequestGrantType.
 const (
 	AppleToken GetTokensByAppleTokenRequestGrantType = "apple_token"
@@ -192,6 +240,25 @@ type CreatePlaylistRequest struct {
 type CreatePlaylistResponse struct {
 	Id openapi_types.UUID `json:"id"`
 }
+
+// CreateUserEventRequest defines model for CreateUserEventRequest.
+type CreateUserEventRequest struct {
+	ClientEventId   openapi_types.UUID                 `json:"client_event_id"`
+	ContextId       *openapi_types.UUID                `json:"context_id,omitempty"`
+	ContextType     *CreateUserEventRequestContextType `json:"context_type,omitempty"`
+	DurationSeconds *int                               `json:"duration_seconds,omitempty"`
+	EventType       CreateUserEventRequestEventType    `json:"event_type"`
+	PercentPlayed   *float32                           `json:"percent_played,omitempty"`
+	PositionSeconds *int                               `json:"position_seconds,omitempty"`
+	SongId          openapi_types.UUID                 `json:"song_id"`
+	Source          *string                            `json:"source,omitempty"`
+}
+
+// CreateUserEventRequestContextType defines model for CreateUserEventRequest.ContextType.
+type CreateUserEventRequestContextType string
+
+// CreateUserEventRequestEventType defines model for CreateUserEventRequest.EventType.
+type CreateUserEventRequestEventType string
 
 // CreateUserRequest defines model for CreateUserRequest.
 type CreateUserRequest struct {
@@ -447,6 +514,9 @@ type AddSongToPlaylistJSONRequestBody = AddSongToPlaylistRequest
 // GenerateTokensJSONRequestBody defines body for GenerateTokens for application/json ContentType.
 type GenerateTokensJSONRequestBody = GetTokensRequest
 
+// RecordUserEventJSONRequestBody defines body for RecordUserEvent for application/json ContentType.
+type RecordUserEventJSONRequestBody = CreateUserEventRequest
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
 
@@ -670,6 +740,9 @@ type ServerInterface interface {
 	// Obtain access and refresh tokens
 	// (POST /tokens)
 	GenerateTokens(w http.ResponseWriter, r *http.Request)
+	// Record a user playback event
+	// (POST /user-events)
+	RecordUserEvent(w http.ResponseWriter, r *http.Request)
 	// Create user with verification code
 	// (POST /users)
 	CreateUser(w http.ResponseWriter, r *http.Request)
@@ -1314,6 +1387,26 @@ func (siw *ServerInterfaceWrapper) GenerateTokens(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// RecordUserEvent operation middleware
+func (siw *ServerInterfaceWrapper) RecordUserEvent(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordUserEvent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateUser operation middleware
 func (siw *ServerInterfaceWrapper) CreateUser(w http.ResponseWriter, r *http.Request) {
 
@@ -1504,6 +1597,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/search", wrapper.Search)
 	m.HandleFunc("GET "+options.BaseURL+"/songs/{id}", wrapper.GetSong)
 	m.HandleFunc("POST "+options.BaseURL+"/tokens", wrapper.GenerateTokens)
+	m.HandleFunc("POST "+options.BaseURL+"/user-events", wrapper.RecordUserEvent)
 	m.HandleFunc("POST "+options.BaseURL+"/users", wrapper.CreateUser)
 	m.HandleFunc("GET "+options.BaseURL+"/users/me", wrapper.GetCurrentUser)
 	m.HandleFunc("POST "+options.BaseURL+"/verification-code-requests", wrapper.CreateVerificationCodeRequest)
@@ -2347,6 +2441,40 @@ func (response GenerateTokens500JSONResponse) VisitGenerateTokensResponse(w http
 	return json.NewEncoder(w).Encode(response)
 }
 
+type RecordUserEventRequestObject struct {
+	Body *RecordUserEventJSONRequestBody
+}
+
+type RecordUserEventResponseObject interface {
+	VisitRecordUserEventResponse(w http.ResponseWriter) error
+}
+
+type RecordUserEvent204Response struct {
+}
+
+func (response RecordUserEvent204Response) VisitRecordUserEventResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RecordUserEvent400JSONResponse Error
+
+func (response RecordUserEvent400JSONResponse) VisitRecordUserEventResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecordUserEvent500JSONResponse Error
+
+func (response RecordUserEvent500JSONResponse) VisitRecordUserEventResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type CreateUserRequestObject struct {
 	Body *CreateUserJSONRequestBody
 }
@@ -2527,6 +2655,9 @@ type StrictServerInterface interface {
 	// Obtain access and refresh tokens
 	// (POST /tokens)
 	GenerateTokens(ctx context.Context, request GenerateTokensRequestObject) (GenerateTokensResponseObject, error)
+	// Record a user playback event
+	// (POST /user-events)
+	RecordUserEvent(ctx context.Context, request RecordUserEventRequestObject) (RecordUserEventResponseObject, error)
 	// Create user with verification code
 	// (POST /users)
 	CreateUser(ctx context.Context, request CreateUserRequestObject) (CreateUserResponseObject, error)
@@ -3158,6 +3289,37 @@ func (sh *strictHandler) GenerateTokens(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GenerateTokensResponseObject); ok {
 		if err := validResponse.VisitGenerateTokensResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordUserEvent operation middleware
+func (sh *strictHandler) RecordUserEvent(w http.ResponseWriter, r *http.Request) {
+	var request RecordUserEventRequestObject
+
+	var body RecordUserEventJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordUserEvent(ctx, request.(RecordUserEventRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordUserEvent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RecordUserEventResponseObject); ok {
+		if err := validResponse.VisitRecordUserEventResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

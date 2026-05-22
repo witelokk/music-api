@@ -255,14 +255,31 @@ func (r *PostgresPlaylistsRepository) AddSongToPlaylist(ctx context.Context, use
 		ON CONFLICT (playlist_id, song_id) DO NOTHING
 	`
 
-	cmd, err := r.pool.Exec(ctx, query, playlistID, userID, songID)
+	const event_query = `
+		INSERT INTO user_events (user_id, event_type, song_id, playlist_id, event_time)
+		VALUES ($1, 'playlist_add_song', $3, $2, NOW())
+	`
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	cmd, err := tx.Exec(ctx, query, playlistID, userID, songID)
 	if err != nil {
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
 		return r.classifyPlaylistSongMutationError(ctx, userID, playlistID, songID)
 	}
-	return nil
+
+	_, err = tx.Exec(ctx, event_query, userID, playlistID, songID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *PostgresPlaylistsRepository) RemoveSongFromPlaylist(ctx context.Context, userID, playlistID, songID string) error {
@@ -275,14 +292,31 @@ func (r *PostgresPlaylistsRepository) RemoveSongFromPlaylist(ctx context.Context
 		  AND p.user_id = $3
 	`
 
-	cmd, err := r.pool.Exec(ctx, query, playlistID, songID, userID)
+	const event_query = `
+		INSERT INTO user_events (user_id, event_type, song_id, playlist_id, event_time)
+		VALUES ($1, 'playlist_remove_song', $3, $2, NOW())
+	`
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	cmd, err := tx.Exec(ctx, query, playlistID, songID, userID)
 	if err != nil {
 		return err
 	}
 	if cmd.RowsAffected() == 0 {
 		return r.classifyPlaylistSongMutationError(ctx, userID, playlistID, songID)
 	}
-	return nil
+
+	_, err = tx.Exec(ctx, event_query, userID, playlistID, songID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *PostgresPlaylistsRepository) classifyPlaylistSongMutationError(

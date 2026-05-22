@@ -848,6 +848,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  
+  /user-events:
+    post:
+      tags: [UserEvents]
+      summary: Record a user playback event
+      operationId: recordUserEvent
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserEventRequest'
+      responses:
+        '204':
+          description: Event recorded.
+        '400':
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to record event.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   securitySchemes:
@@ -1378,3 +1407,40 @@ components:
         - playlists
         - followedArtists
         - sections
+
+    CreateUserEventRequest:
+      type: object
+      required:
+        - event_type
+        - song_id
+        - client_event_id
+      properties:
+        event_type:
+          type: string
+          enum: [song_play, song_skip, song_complete]
+        song_id:
+          type: string
+          format: uuid
+        position_seconds:
+          type: integer
+          minimum: 0
+        duration_seconds:
+          type: integer
+          minimum: 1
+        percent_played:
+          type: number
+          minimum: 0
+          maximum: 100
+        source:
+          type: string
+          example: home
+        context_type:
+          type: string
+          enum: [playlist, release, artist, queue, recommendations]
+          example: playlist
+        context_id:
+          type: string
+          format: uuid
+        client_event_id:
+          type: string
+          format: uuid
