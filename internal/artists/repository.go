@@ -50,8 +50,11 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 		       ) AS is_favorite
 		FROM song_artists sa
 		JOIN songs s ON s.id = sa.song_id
+		LEFT JOIN user_events ue ON ue.song_id = s.id AND ue.event_type = 'song_play'
 		WHERE sa.artist_id = $1
-		ORDER BY s.streams_count DESC
+		GROUP BY s.id, s.name, s.cover_media_id, s.duration, s.stream_media_id
+		ORDER BY COUNT(DISTINCT (ue.user_id, ue.client_event_id)) FILTER (WHERE ue.id IS NOT NULL) DESC,
+		         s.name
 		LIMIT 5
 	`
 
@@ -61,8 +64,11 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 			SELECT s.id AS song_id
 			FROM song_artists sa
 			JOIN songs s ON s.id = sa.song_id
+			LEFT JOIN user_events ue ON ue.song_id = s.id AND ue.event_type = 'song_play'
 			WHERE sa.artist_id = $1
-			ORDER BY s.streams_count DESC
+			GROUP BY s.id, s.name
+			ORDER BY COUNT(DISTINCT (ue.user_id, ue.client_event_id)) FILTER (WHERE ue.id IS NOT NULL) DESC,
+			         s.name
 			LIMIT 5
 		) top_songs
 		JOIN song_artists sa ON sa.song_id = top_songs.song_id
