@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS idx_playlists_name_trgm;
+DROP INDEX IF EXISTS idx_releases_name_trgm;
+DROP INDEX IF EXISTS idx_artists_name_trgm;
+DROP INDEX IF EXISTS idx_songs_name_trgm;
+DROP INDEX IF EXISTS idx_playlist_songs_playlist_added_song;
+DROP INDEX IF EXISTS idx_playlists_user_created;
+DROP INDEX IF EXISTS idx_favorites_user_added_song;
+DROP INDEX IF EXISTS idx_followings_artist_user;
+DROP INDEX IF EXISTS idx_release_songs_song_release;
+DROP INDEX IF EXISTS idx_song_artists_artist_song;
