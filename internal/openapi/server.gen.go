@@ -131,6 +131,27 @@ func (e GetTokensByRefreshTokenRequestGrantType) Valid() bool {
 	}
 }
 
+// Defines values for HomeFeedItemType.
+const (
+	HomeFeedItemTypeArtist   HomeFeedItemType = "artist"
+	HomeFeedItemTypePlaylist HomeFeedItemType = "playlist"
+	HomeFeedItemTypeRelease  HomeFeedItemType = "release"
+)
+
+// Valid indicates whether the value is a known member of the HomeFeedItemType enum.
+func (e HomeFeedItemType) Valid() bool {
+	switch e {
+	case HomeFeedItemTypeArtist:
+		return true
+	case HomeFeedItemTypePlaylist:
+		return true
+	case HomeFeedItemTypeRelease:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReleaseType.
 const (
 	Album  ReleaseType = "album"
@@ -357,10 +378,23 @@ type HomeFeed struct {
 	Sections        []HomeScreenSection `json:"sections"`
 }
 
+// HomeFeedItem defines model for HomeFeedItem.
+type HomeFeedItem struct {
+	Artist   *ArtistSummary   `json:"artist,omitempty"`
+	Playlist *PlaylistSummary `json:"playlist,omitempty"`
+	Release  *ReleaseSummary  `json:"release,omitempty"`
+
+	// Type Type of the home feed item.
+	Type HomeFeedItemType `json:"type"`
+}
+
+// HomeFeedItemType Type of the home feed item.
+type HomeFeedItemType string
+
 // HomeScreenSection defines model for HomeScreenSection.
 type HomeScreenSection struct {
-	Releases ReleaseSummaryList `json:"releases"`
-	Titles   map[string]string  `json:"titles"`
+	Items  []HomeFeedItem    `json:"items"`
+	Titles map[string]string `json:"titles"`
 }
 
 // Playlist defines model for Playlist.

@@ -10,9 +10,24 @@ import (
 	"github.com/witelokk/music-api/internal/releases"
 )
 
+type ItemType string
+
+const (
+	ItemTypeRelease  ItemType = "release"
+	ItemTypePlaylist ItemType = "playlist"
+	ItemTypeArtist   ItemType = "artist"
+)
+
+type Item struct {
+	Type     ItemType
+	Release  *releases.Release
+	Playlist *playlists.PlaylistSummary
+	Artist   *followings.FollowedArtist
+}
+
 type Section struct {
-	Titles   map[string]string
-	Releases []releases.Release
+	Titles map[string]string
+	Items  []Item
 }
 
 type Layout struct {
@@ -60,7 +75,7 @@ func (s *Service) GetHomeFeed(ctx context.Context, userID string, now time.Time)
 		return nil, err
 	}
 
-	sections := buildSections(seedStr, allReleases)
+	sections := buildSections(seedStr, allReleases, playlistsRows, followedArtistsRows)
 
 	return &Layout{
 		Playlists:       playlistsRows,
@@ -69,7 +84,12 @@ func (s *Service) GetHomeFeed(ctx context.Context, userID string, now time.Time)
 	}, nil
 }
 
-func buildSections(seed string, allReleases []releases.Release) []Section {
+func buildSections(
+	seed string,
+	allReleases []releases.Release,
+	allPlaylists []playlists.PlaylistSummary,
+	allArtists []followings.FollowedArtist,
+) []Section {
 	sectionDefs := []Section{
 		{Titles: map[string]string{"en": "Featured Releases", "ru": "Избранные релизы"}},
 		{Titles: map[string]string{"en": "Popular This Week", "ru": "Популярное на этой неделе"}},
@@ -90,35 +110,57 @@ func buildSections(seed string, allReleases []releases.Release) []Section {
 
 	sectionCount := rnd.Intn(len(sectionDefs)) + 1
 	indexes := rnd.Perm(len(sectionDefs))[:sectionCount]
+	itemPool := make([]Item, 0, len(allReleases)+len(allPlaylists)+len(allArtists))
+	for i := range allReleases {
+		itemPool = append(itemPool, Item{
+			Type:    ItemTypeRelease,
+			Release: &allReleases[i],
+		})
+	}
+	for i := range allPlaylists {
+		itemPool = append(itemPool, Item{
+			Type:     ItemTypePlaylist,
+			Playlist: &allPlaylists[i],
+		})
+	}
+	for i := range allArtists {
+		itemPool = append(itemPool, Item{
+			Type:   ItemTypeArtist,
+			Artist: &allArtists[i],
+		})
+	}
 
 	sections := make([]Section, 0, sectionCount)
 	for _, idx := range indexes {
 		def := sectionDefs[idx]
 
-		var sectionReleases []releases.Release
-		if len(allReleases) > 0 {
+		var sectionItems []Item
+		if len(itemPool) > 0 {
 			// Derive per-section seed from base seed + title.
 			var sh int64
+			for i := 0; i < len(seed); i++ {
+				sh = sh*31 + int64(seed[i])
+			}
 			for i := 0; i < len(def.Titles["en"]); i++ {
 				sh = sh*31 + int64(def.Titles["en"][i])
 			}
 			srnd := rand.New(rand.NewSource(sh))
 
 			count := srnd.Intn(10) + 1
-			if count > len(allReleases) {
-				count = len(allReleases)
+			if count > len(itemPool) {
+				count = len(itemPool)
 			}
 
-			indexes := srnd.Perm(len(allReleases))[:count]
-			sectionReleases = make([]releases.Release, 0, count)
+			indexes := srnd.Perm(len(itemPool))[:count]
+			sectionItems = make([]Item, 0, count)
 			for _, i := range indexes {
-				sectionReleases = append(sectionReleases, allReleases[i])
+				sectionItems = append(sectionItems, itemPool[i])
 			}
 		}
 
 		sections = append(sections, Section{
-			Titles:   def.Titles,
-			Releases: sectionReleases,
+			Titles: def.Titles,
+			Items:  sectionItems,
 		})
 	}
 

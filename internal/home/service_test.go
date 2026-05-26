@@ -112,10 +112,10 @@ func TestService_GetHomeFeed_UsesSeededRepos(t *testing.T) {
 	if len(layout.Sections) == 0 {
 		t.Fatalf("expected at least one section, got 0")
 	}
-	// Each section should have some releases drawn from the fake repo.
+	// Each section should have some items drawn from the fake repos.
 	for _, sec := range layout.Sections {
-		if len(sec.Releases) == 0 {
-			t.Fatalf("expected section %q to have releases", sec.Titles["en"])
+		if len(sec.Items) == 0 {
+			t.Fatalf("expected section %q to have items", sec.Titles["en"])
 		}
 	}
 }

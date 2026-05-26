@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/witelokk/music-api/internal/auth"
-	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/followings"
+	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/playlists"
 	"github.com/witelokk/music-api/internal/releases"
 )
@@ -78,14 +78,26 @@ func TestHandleGetHomeFeed_OK(t *testing.T) {
 	if okResp.Sections[0].Titles["en"] == "" || okResp.Sections[0].Titles["ru"] == "" {
 		t.Fatalf("expected localized titles, got %+v", okResp.Sections[0].Titles)
 	}
-	if okResp.Sections[0].Releases.Count != 1 {
-		t.Fatalf("expected 1 release in first section, got %d", okResp.Sections[0].Releases.Count)
+	if len(okResp.Sections[0].Items) == 0 {
+		t.Fatalf("expected at least 1 item in first section, got 0")
 	}
-	firstRelease := okResp.Sections[0].Releases.Releases[0]
-	if firstRelease.Name != "Release 1" {
-		t.Fatalf("expected release name %q, got %q", "Release 1", firstRelease.Name)
+
+	var foundRelease bool
+	for _, section := range okResp.Sections {
+		for _, item := range section.Items {
+			if item.Type != openapi.HomeFeedItemTypeRelease || item.Release == nil {
+				continue
+			}
+			foundRelease = true
+			if item.Release.Name != "Release 1" {
+				t.Fatalf("expected release name %q, got %q", "Release 1", item.Release.Name)
+			}
+			if item.Release.ReleasedAt != "2024-03-15" {
+				t.Fatalf("expected release date %q, got %q", "2024-03-15", item.Release.ReleasedAt)
+			}
+		}
 	}
-	if firstRelease.ReleasedAt != "2024-03-15" {
-		t.Fatalf("expected release date %q, got %q", "2024-03-15", firstRelease.ReleasedAt)
+	if !foundRelease {
+		t.Fatalf("expected release item in first section, got %+v", okResp.Sections[0].Items)
 	}
 }
