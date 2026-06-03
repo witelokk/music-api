@@ -246,6 +246,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '429':
           description: Verification code was sent too recently.
+          headers:
+            Retry-After:
+              description: Seconds to wait before requesting another verification code.
+              schema:
+                type: integer
+                minimum: 1
           content:
             application/json:
               schema:

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -259,8 +260,15 @@ func TestAuthService_SendVerificationEmail_RecentlySent(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error, got nil")
 	}
-	if err != ErrVerificationCodeRecentlySent {
+	if !errors.Is(err, ErrVerificationCodeRecentlySent) {
 		t.Fatalf("expected ErrVerificationCodeRecentlySent, got %v", err)
+	}
+	var recentlySentErr *VerificationCodeRecentlySentError
+	if !errors.As(err, &recentlySentErr) {
+		t.Fatalf("expected VerificationCodeRecentlySentError, got %T", err)
+	}
+	if recentlySentErr.RetryAfter <= 0 || recentlySentErr.RetryAfter > 5*time.Minute {
+		t.Fatalf("expected retry after up to 5m, got %s", recentlySentErr.RetryAfter)
 	}
 	if len(emailSender.sent) != 0 {
 		t.Fatalf("expected no email sent, got %d", len(emailSender.sent))

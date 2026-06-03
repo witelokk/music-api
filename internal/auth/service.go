@@ -22,6 +22,18 @@ var ErrInvalidAccessToken = errors.New("invalid access token")
 var ErrInvalidGoogleIDToken = errors.New("invalid Google ID token")
 var ErrInvalidAppleIDToken = errors.New("invalid Apple ID token")
 
+type VerificationCodeRecentlySentError struct {
+	RetryAfter time.Duration
+}
+
+func (e *VerificationCodeRecentlySentError) Error() string {
+	return ErrVerificationCodeRecentlySent.Error()
+}
+
+func (e *VerificationCodeRecentlySentError) Unwrap() error {
+	return ErrVerificationCodeRecentlySent
+}
+
 type AuthServiceParams struct {
 	JWTSecret                   string
 	AccessTokenTTL              time.Duration
@@ -282,8 +294,11 @@ func (s *AuthService) ensureCanIssueNewCode(ctx context.Context, email string) e
 	}
 
 	issuedAt := latest.ExpiresAt.Add(-s.params.VerificationCodeTTL)
-	if time.Since(issuedAt) < s.params.NewVerificationCodeInterval {
-		return ErrVerificationCodeRecentlySent
+	retryAfter := s.params.NewVerificationCodeInterval - time.Since(issuedAt)
+	if retryAfter > 0 {
+		return &VerificationCodeRecentlySentError{
+			RetryAfter: retryAfter,
+		}
 	}
 
 	return nil

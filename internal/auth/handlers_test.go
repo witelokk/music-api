@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -85,6 +87,52 @@ func TestHandleCreateVerificationCodeRequest_Success(t *testing.T) {
 
 	if _, ok := resp.(openapi.CreateVerificationCodeRequest202Response); !ok {
 		t.Fatalf("expected 202 response, got %T", resp)
+	}
+}
+
+func TestHandleCreateVerificationCodeRequest_RecentlySentWritesRetryAfter(t *testing.T) {
+	svc, _, codeRepo, _, _ := newTestAuthService()
+	logger := newTestLogger()
+	ctx := context.Background()
+	email := "user@example.com"
+	now := time.Now()
+	codeRepo.codesByEmail[email] = []*VerificationCode{
+		{
+			Code:      "1234",
+			Email:     email,
+			ExpiresAt: now.Add(svc.params.VerificationCodeTTL - 5*time.Minute),
+		},
+	}
+
+	req := openapi.CreateVerificationCodeRequestRequestObject{
+		Body: &openapi.CreateVerificationCodeRequestJSONRequestBody{
+			Email: openapi_types.Email(email),
+		},
+	}
+
+	resp, err := HandleCreateVerificationCodeRequest(ctx, svc, logger, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	if err := resp.VisitCreateVerificationCodeRequestResponse(w); err != nil {
+		t.Fatalf("unexpected response write error: %v", err)
+	}
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected status %d, got %d", http.StatusTooManyRequests, w.Code)
+	}
+	if got := w.Header().Get("Retry-After"); got != "300" {
+		t.Fatalf("expected Retry-After %q, got %q", "300", got)
+	}
+
+	var body openapi.Error
+	if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
+		t.Fatalf("failed to decode response body: %v", err)
+	}
+	if body.Error != "verification code recently sent" {
+		t.Fatalf("expected error %q, got %q", "verification code recently sent", body.Error)
 	}
 }
 

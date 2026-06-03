@@ -2,9 +2,13 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/http"
 	"net/mail"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -35,7 +39,15 @@ func HandleCreateVerificationCodeRequest(
 
 	if err := service.SendVerificationEmail(ctx, string(body.Email)); err != nil {
 		if errors.Is(err, ErrVerificationCodeRecentlySent) {
-			return openapi.CreateVerificationCodeRequest429JSONResponse(openapi.Error{Error: "verification code recently sent"}), nil
+			var recentlySentErr *VerificationCodeRecentlySentError
+			retryAfter := service.params.NewVerificationCodeInterval
+			if errors.As(err, &recentlySentErr) {
+				retryAfter = recentlySentErr.RetryAfter
+			}
+			return createVerificationCodeRequest429Response{
+				Body:       openapi.Error{Error: "verification code recently sent"},
+				RetryAfter: retryAfterSeconds(retryAfter),
+			}, nil
 		}
 
 		reqLogger.Error("failed to send verification email",
@@ -47,6 +59,26 @@ func HandleCreateVerificationCodeRequest(
 	}
 
 	return openapi.CreateVerificationCodeRequest202Response{}, nil
+}
+
+type createVerificationCodeRequest429Response struct {
+	Body       openapi.Error
+	RetryAfter int
+}
+
+func (response createVerificationCodeRequest429Response) VisitCreateVerificationCodeRequestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Retry-After", strconv.Itoa(response.RetryAfter))
+	w.WriteHeader(http.StatusTooManyRequests)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+func retryAfterSeconds(d time.Duration) int {
+	if d <= 0 {
+		return 1
+	}
+	return int((d + time.Second - 1) / time.Second)
 }
 
 func HandleCreateUser(
