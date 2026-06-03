@@ -3,9 +3,11 @@ package userevents
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 const zeroUUID = "00000000-0000-0000-0000-000000000000"
+const feedRefreshEnqueueTimeout = 500 * time.Millisecond
 
 var (
 	ErrSongNotFound           = errors.New("song not found")
@@ -20,18 +22,38 @@ var (
 )
 
 type UserEventsService struct {
-	repository UserEventsRepository
+	repository       UserEventsRepository
+	feedRefreshQueue FeedRefreshQueue
+}
+
+type FeedRefreshQueue interface {
+	Enqueue(ctx context.Context, userID, reason string) error
 }
 
 func NewUserEventsService(repository UserEventsRepository) *UserEventsService {
 	return &UserEventsService{repository: repository}
 }
 
+func NewUserEventsServiceWithFeedRefreshQueue(repository UserEventsRepository, feedRefreshQueue FeedRefreshQueue) *UserEventsService {
+	return &UserEventsService{
+		repository:       repository,
+		feedRefreshQueue: feedRefreshQueue,
+	}
+}
+
 func (s *UserEventsService) RecordEvent(ctx context.Context, event UserEvent) error {
 	if err := validateClientEvent(event); err != nil {
 		return err
 	}
-	return s.repository.Record(ctx, event)
+	if err := s.repository.Record(ctx, event); err != nil {
+		return err
+	}
+	if s.feedRefreshQueue != nil {
+		enqueueCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), feedRefreshEnqueueTimeout)
+		defer cancel()
+		_ = s.feedRefreshQueue.Enqueue(enqueueCtx, event.UserID, "user_event")
+	}
+	return nil
 }
 
 func validateClientEvent(event UserEvent) error {

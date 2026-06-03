@@ -1,14 +1,14 @@
-package home
+package home_feed
 
 import (
 	"context"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/mediaurl"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/playlists"
@@ -37,21 +37,6 @@ func HandleGetHomeFeed(
 			slog.String("error", err.Error()),
 		)
 		return openapi.GetHomeFeed500JSONResponse(openapi.Error{Error: "failed to fetch home screen layout"}), nil
-	}
-
-	respPlaylists := make([]openapi.PlaylistSummary, 0, len(layout.Playlists))
-	for _, p := range layout.Playlists {
-		respPlaylists = append(respPlaylists, toOpenAPIPlaylistSummary(p))
-	}
-
-	var (
-		artistSummaries = make([]openapi.ArtistSummary, 0, len(layout.FollowedArtists))
-		artistNames     = make([]string, 0, len(layout.FollowedArtists))
-	)
-	for _, a := range layout.FollowedArtists {
-		summary := toOpenAPIArtistSummary(a.ID, a.Name, a.AvatarMediaID)
-		artistSummaries = append(artistSummaries, summary)
-		artistNames = append(artistNames, a.Name)
 	}
 
 	sections := make([]openapi.HomeScreenSection, 0, len(layout.Sections))
@@ -86,6 +71,10 @@ func HandleGetHomeFeed(
 					Type:   openapi.HomeFeedItemTypeArtist,
 					Artist: &artistSummary,
 				})
+			case ItemTypeFavorites:
+				items = append(items, openapi.HomeFeedItem{
+					Type: openapi.HomeFeedItemTypeFavorites,
+				})
 			}
 		}
 
@@ -96,17 +85,29 @@ func HandleGetHomeFeed(
 	}
 
 	return openapi.GetHomeFeed200JSONResponse(openapi.HomeFeed{
-		Playlists: openapi.PlaylistsSummary{
-			Count:     len(respPlaylists),
-			Playlists: respPlaylists,
-		},
-		FollowedArtists: openapi.ArtistList{
-			Count:   len(artistSummaries),
-			Artists: artistSummaries,
-			Names:   strings.Join(artistNames, ", "),
-		},
 		Sections: sections,
 	}), nil
+}
+
+func toOpenAPIFavoriteSong(song favorites.FavoriteSong) openapi.Song {
+	artistSummaries := make([]openapi.ArtistSummary, 0, len(song.Artists))
+	for _, a := range song.Artists {
+		artistSummaries = append(artistSummaries, toOpenAPIArtistSummary(a.ID, a.Name, a.AvatarMediaID))
+	}
+
+	respSong := openapi.Song{
+		Id:              uuid.MustParse(song.ID),
+		Name:            song.Name,
+		DurationSeconds: song.DurationSeconds,
+		StreamUrl:       mediaurl.Build(song.StreamMediaID),
+		IsFavorite:      true,
+		Artists:         artistSummaries,
+	}
+	if song.CoverMediaID != nil && *song.CoverMediaID != "" {
+		coverURL := mediaurl.Build(*song.CoverMediaID)
+		respSong.CoverUrl = &coverURL
+	}
+	return respSong
 }
 
 func toOpenAPIPlaylistSummary(p playlists.PlaylistSummary) openapi.PlaylistSummary {

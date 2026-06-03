@@ -23,6 +23,18 @@ func (r *fakeReleasesRepo) GetRandomReleases(ctx context.Context, seed string, l
 	return nil, nil
 }
 
+func (r *fakeReleasesRepo) GetRecentReleases(ctx context.Context, limit int) ([]Release, error) {
+	return nil, nil
+}
+
+func (r *fakeReleasesRepo) GetReleasesByFollowedArtistSeeds(ctx context.Context, artistIDs []string, seed string, limit int) ([]Release, error) {
+	return nil, nil
+}
+
+func (r *fakeReleasesRepo) GetReleasesByFavoriteSongSeeds(ctx context.Context, songIDs []string, seed string, limit int) ([]Release, error) {
+	return nil, nil
+}
+
 func TestService_GetRelease_Success(t *testing.T) {
 	want := &Release{
 		ID:   "release-id",

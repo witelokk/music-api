@@ -10,7 +10,7 @@ import (
 )
 
 type fakeUserRepository struct {
-	users          map[string]*User
+	users         map[string]*User
 	getErr        error
 	createErr     error
 	lastCreatedID string
@@ -164,6 +164,19 @@ type fakeEmailSender struct {
 	err error
 }
 
+type fakeFeedRefreshQueue struct {
+	calls  int
+	userID string
+	reason string
+}
+
+func (q *fakeFeedRefreshQueue) Enqueue(ctx context.Context, userID, reason string) error {
+	q.calls++
+	q.userID = userID
+	q.reason = reason
+	return nil
+}
+
 func (s *fakeEmailSender) SendEmail(ctx context.Context, to []string, subject, text string) error {
 	if s.err != nil {
 		return s.err
@@ -284,6 +297,50 @@ func TestAuthService_CreateUser_Success(t *testing.T) {
 	}
 	if stored.ID != user.ID {
 		t.Fatalf("expected stored user ID %q, got %q", user.ID, stored.ID)
+	}
+}
+
+func TestAuthService_CreateUser_EnqueuesFeedRefresh(t *testing.T) {
+	userRepo := newFakeUserRepository()
+	codeRepo := newFakeVerificationCodeRepository()
+	refreshRepo := newFakeRefreshTokenRepository()
+	queue := &fakeFeedRefreshQueue{}
+	svc := NewAuthService(
+		userRepo,
+		codeRepo,
+		refreshRepo,
+		&fakeEmailSender{},
+		AuthServiceParams{
+			JWTSecret:                   "test-secret",
+			AccessTokenTTL:              15 * time.Minute,
+			RefreshTokenTTL:             30 * 24 * time.Hour,
+			VerificationCodeTTL:         15 * time.Minute,
+			NewVerificationCodeInterval: 10 * time.Minute,
+			FeedRefreshQueue:            queue,
+		},
+	)
+
+	ctx := context.Background()
+	email := "user@example.com"
+	codeRepo.codesByEmail[email] = []*VerificationCode{{
+		Code:      "abcd",
+		Email:     email,
+		ExpiresAt: time.Now().Add(5 * time.Minute),
+	}}
+
+	user := &User{Name: "Test User", Email: email}
+	if err := svc.CreateUser(ctx, user, "abcd"); err != nil {
+		t.Fatalf("CreateUser() error = %v, want nil", err)
+	}
+
+	if queue.calls != 1 {
+		t.Fatalf("expected one feed refresh enqueue, got %d", queue.calls)
+	}
+	if queue.userID != user.ID {
+		t.Fatalf("expected enqueue user ID %q, got %q", user.ID, queue.userID)
+	}
+	if queue.reason != "user_created" {
+		t.Fatalf("expected reason user_created, got %q", queue.reason)
 	}
 }
 

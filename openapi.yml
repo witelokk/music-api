@@ -1400,7 +1400,7 @@ components:
         type:
           type: string
           description: Type of the home feed item.
-          enum: [release, playlist, artist]
+          enum: [release, playlist, artist, favorites]
         release:
           $ref: '#/components/schemas/ReleaseSummary'
           nullable: true
@@ -1416,17 +1416,11 @@ components:
     HomeFeed:
       type: object
       properties:
-        playlists:
-          $ref: '#/components/schemas/PlaylistsSummary'
-        followedArtists:
-          $ref: '#/components/schemas/ArtistList'
         sections:
           type: array
           items:
             $ref: '#/components/schemas/HomeScreenSection'
       required:
-        - playlists
-        - followedArtists
         - sections
 
     CreateUserEventRequest:

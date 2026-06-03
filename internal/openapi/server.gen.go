@@ -133,15 +133,18 @@ func (e GetTokensByRefreshTokenRequestGrantType) Valid() bool {
 
 // Defines values for HomeFeedItemType.
 const (
-	HomeFeedItemTypeArtist   HomeFeedItemType = "artist"
-	HomeFeedItemTypePlaylist HomeFeedItemType = "playlist"
-	HomeFeedItemTypeRelease  HomeFeedItemType = "release"
+	HomeFeedItemTypeArtist    HomeFeedItemType = "artist"
+	HomeFeedItemTypeFavorites HomeFeedItemType = "favorites"
+	HomeFeedItemTypePlaylist  HomeFeedItemType = "playlist"
+	HomeFeedItemTypeRelease   HomeFeedItemType = "release"
 )
 
 // Valid indicates whether the value is a known member of the HomeFeedItemType enum.
 func (e HomeFeedItemType) Valid() bool {
 	switch e {
 	case HomeFeedItemTypeArtist:
+		return true
+	case HomeFeedItemTypeFavorites:
 		return true
 	case HomeFeedItemTypePlaylist:
 		return true
@@ -373,9 +376,7 @@ type GetTokensRequest struct {
 
 // HomeFeed defines model for HomeFeed.
 type HomeFeed struct {
-	FollowedArtists ArtistList          `json:"followedArtists"`
-	Playlists       PlaylistsSummary    `json:"playlists"`
-	Sections        []HomeScreenSection `json:"sections"`
+	Sections []HomeScreenSection `json:"sections"`
 }
 
 // HomeFeedItem defines model for HomeFeedItem.

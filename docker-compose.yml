@@ -26,6 +26,29 @@ services:
     networks:
       - backend
 
+  feed-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/witelokk/music-api:latest
+    container_name: music-feed-worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://music_user:music_password@postgres:5432/music_db?sslmode=disable
+      REDIS_URL: redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: media
+      MINIO_USE_SSL: "false"
+    command: ["./feed-worker"]
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - backend
+
   postgres:
     image: postgres:16-alpine
     container_name: music-postgres

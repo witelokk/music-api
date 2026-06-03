@@ -16,6 +16,20 @@ func (r *fakeRecordRepo) Record(ctx context.Context, event UserEvent) error {
 	return r.err
 }
 
+type fakeFeedRefreshQueue struct {
+	calls  int
+	userID string
+	reason string
+	err    error
+}
+
+func (q *fakeFeedRefreshQueue) Enqueue(ctx context.Context, userID, reason string) error {
+	q.calls++
+	q.userID = userID
+	q.reason = reason
+	return q.err
+}
+
 func TestRecordEvent_RequiresClientEventID(t *testing.T) {
 	repo := &fakeRecordRepo{}
 	service := NewUserEventsService(repo)
@@ -74,6 +88,34 @@ func TestRecordEvent_AllowsValidPlaybackEvent(t *testing.T) {
 	}
 	if repo.calls != 1 {
 		t.Fatalf("expected repository to be called once, got %d calls", repo.calls)
+	}
+}
+
+func TestRecordEvent_EnqueuesFeedRefreshAfterRecordingEvent(t *testing.T) {
+	repo := &fakeRecordRepo{}
+	queue := &fakeFeedRefreshQueue{}
+	service := NewUserEventsServiceWithFeedRefreshQueue(repo, queue)
+	songID := "song-id"
+	clientEventID := "client-event-id"
+
+	err := service.RecordEvent(context.Background(), UserEvent{
+		UserID:        "user-id",
+		EventType:     EventTypeSongPlay,
+		SongID:        &songID,
+		ClientEventID: &clientEventID,
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if queue.calls != 1 {
+		t.Fatalf("expected feed refresh to be enqueued once, got %d calls", queue.calls)
+	}
+	if queue.userID != "user-id" {
+		t.Fatalf("expected feed refresh user user-id, got %q", queue.userID)
+	}
+	if queue.reason != "user_event" {
+		t.Fatalf("expected feed refresh reason user_event, got %q", queue.reason)
 	}
 }
 

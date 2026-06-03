@@ -10,11 +10,13 @@ RUN go mod download
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o music-api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o feed-worker ./cmd/feed-worker
 
 FROM alpine:latest
 WORKDIR /app
 
 COPY --from=builder /app/music-api .
+COPY --from=builder /app/feed-worker .
 COPY --from=builder /app/openapi.yml .
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /go/bin/migrate /usr/local/bin/migrate

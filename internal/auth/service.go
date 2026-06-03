@@ -30,6 +30,13 @@ type AuthServiceParams struct {
 	NewVerificationCodeInterval time.Duration
 	GoogleIdTokenVerifier       *idtoken.Validator
 	AppleIdTokenVerifier        *idtoken.Validator
+	FeedRefreshQueue            FeedRefreshQueue
+}
+
+const feedRefreshEnqueueTimeout = 500 * time.Millisecond
+
+type FeedRefreshQueue interface {
+	Enqueue(ctx context.Context, userID, reason string) error
 }
 
 type AuthService struct {
@@ -246,6 +253,12 @@ func (s *AuthService) createUserWithVerifiedEmail(ctx context.Context, user *Use
 
 	if createdUser != nil && user != nil {
 		*user = *createdUser
+	}
+
+	if createdUser != nil && s.params.FeedRefreshQueue != nil {
+		enqueueCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), feedRefreshEnqueueTimeout)
+		defer cancel()
+		_ = s.params.FeedRefreshQueue.Enqueue(enqueueCtx, createdUser.ID, "user_created")
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/minio/minio-go/v7"
@@ -15,7 +16,7 @@ import (
 	"github.com/witelokk/music-api/internal/auth/idtoken"
 	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/followings"
-	"github.com/witelokk/music-api/internal/home"
+	"github.com/witelokk/music-api/internal/home_feed"
 	"github.com/witelokk/music-api/internal/media"
 	"github.com/witelokk/music-api/internal/mediaurl"
 	"github.com/witelokk/music-api/internal/playlists"
@@ -80,6 +81,7 @@ func main() {
 	)
 	googleIDTokenValidator := idtoken.NewGoogleValidator(config.Auth.GoogleIdTokenAudiences)
 	appleIDTokenValidator := idtoken.NewAppleValidator(config.Auth.AppleIdTokenAudiences)
+	feedRefreshQueue := home_feed.NewRedisFeedRefreshQueue(redis, home_feed.RedisFeedRefreshQueueOptions{})
 
 	authService := auth.NewAuthService(
 		userRespository,
@@ -94,6 +96,7 @@ func main() {
 			NewVerificationCodeInterval: config.Auth.NewVerificationCodeInterval,
 			GoogleIdTokenVerifier:       googleIDTokenValidator,
 			AppleIdTokenVerifier:        appleIDTokenValidator,
+			FeedRefreshQueue:            feedRefreshQueue,
 		},
 	)
 
@@ -104,8 +107,17 @@ func main() {
 	followingsService := followings.NewFollowingsService(followingsRepository)
 	playlistsService := playlists.NewPlaylistsService(playlistsRepository)
 	searchService := search.NewService(searchRepository)
-	homeService := home.NewService(playlistsRepository, followingsRepository, releasesRepository)
-	userEventsService := userevents.NewUserEventsService(userEventsRepository)
+	feedSnapshots := home_feed.NewPostgresFeedSnapshotRepository(db)
+	homeService := home_feed.NewCachedService(
+		favoritesRepository,
+		playlistsRepository,
+		followingsRepository,
+		releasesRepository,
+		feedSnapshots,
+		feedRefreshQueue,
+		15*time.Minute,
+	)
+	userEventsService := userevents.NewUserEventsServiceWithFeedRefreshQueue(userEventsRepository, feedRefreshQueue)
 
 	var mediaService *media.MediaService
 	if err == nil {

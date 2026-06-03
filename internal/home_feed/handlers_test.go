@@ -1,4 +1,4 @@
-package home
+package home_feed
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/witelokk/music-api/internal/auth"
+	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/followings"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/playlists"
@@ -33,6 +34,16 @@ func TestHandleGetHomeFeed_NoUserID(t *testing.T) {
 
 func TestHandleGetHomeFeed_OK(t *testing.T) {
 	logger := newTestLogger()
+	favoritesRepo := &fakeFavoritesRepo{
+		songs: []favorites.FavoriteSong{
+			{
+				ID:              "00000000-0000-0000-0000-000000000004",
+				Name:            "Favorite Song 1",
+				DurationSeconds: 180,
+				StreamMediaID:   "stream-media-id",
+			},
+		},
+	}
 	playlistsRepo := &fakePlaylistsRepo{
 		playlists: []playlists.PlaylistSummary{
 			{ID: "00000000-0000-0000-0000-000000000001", Name: "Playlist 1"},
@@ -52,7 +63,7 @@ func TestHandleGetHomeFeed_OK(t *testing.T) {
 			},
 		},
 	}
-	service := NewService(playlistsRepo, followingsRepo, releasesRepo)
+	service := NewService(favoritesRepo, playlistsRepo, followingsRepo, releasesRepo)
 
 	ctx := auth.WithUserID(context.Background(), "user-id")
 
@@ -66,20 +77,23 @@ func TestHandleGetHomeFeed_OK(t *testing.T) {
 		t.Fatalf("expected 200 response, got %T", resp)
 	}
 
-	if okResp.Playlists.Count != 1 {
-		t.Fatalf("expected 1 playlist, got %d", okResp.Playlists.Count)
-	}
-	if okResp.FollowedArtists.Count != 1 {
-		t.Fatalf("expected 1 followed artist, got %d", okResp.FollowedArtists.Count)
-	}
-	if len(okResp.Sections) == 0 {
-		t.Fatalf("expected at least 1 section, got %d", len(okResp.Sections))
+	if len(okResp.Sections) < 3 {
+		t.Fatalf("expected at least 3 sections, got %d", len(okResp.Sections))
 	}
 	if okResp.Sections[0].Titles["en"] == "" || okResp.Sections[0].Titles["ru"] == "" {
 		t.Fatalf("expected localized titles, got %+v", okResp.Sections[0].Titles)
 	}
-	if len(okResp.Sections[0].Items) == 0 {
-		t.Fatalf("expected at least 1 item in first section, got 0")
+	if len(okResp.Sections[0].Items) < 2 {
+		t.Fatalf("expected favorites and playlist items in first section, got %+v", okResp.Sections[0].Items)
+	}
+	if okResp.Sections[0].Items[0].Type != openapi.HomeFeedItemTypeFavorites {
+		t.Fatalf("expected first section to start with favorites item, got %+v", okResp.Sections[0].Items[0])
+	}
+	if okResp.Sections[0].Items[1].Type != openapi.HomeFeedItemTypePlaylist {
+		t.Fatalf("expected first section to include playlist item, got %+v", okResp.Sections[0].Items[1])
+	}
+	if len(okResp.Sections[1].Items) != 1 || okResp.Sections[1].Items[0].Type != openapi.HomeFeedItemTypeArtist {
+		t.Fatalf("expected second section to contain followed artist item, got %+v", okResp.Sections[1].Items)
 	}
 
 	var foundRelease bool

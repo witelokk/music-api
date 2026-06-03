@@ -9,7 +9,7 @@ import (
 	"github.com/witelokk/music-api/internal/auth"
 	"github.com/witelokk/music-api/internal/favorites"
 	"github.com/witelokk/music-api/internal/followings"
-	"github.com/witelokk/music-api/internal/home"
+	"github.com/witelokk/music-api/internal/home_feed"
 	"github.com/witelokk/music-api/internal/media"
 	openapi "github.com/witelokk/music-api/internal/openapi"
 	"github.com/witelokk/music-api/internal/playlists"
@@ -21,7 +21,7 @@ import (
 
 type Server struct {
 	authService       *auth.AuthService
-	homeService       *home.Service
+	homeService       *home_feed.Service
 	songsService      *songs.SongsService
 	artistsService    *artists.ArtistsService
 	releasesService   *releases.ReleasesService
@@ -36,7 +36,7 @@ type Server struct {
 
 func NewServer(
 	authService *auth.AuthService,
-	homeService *home.Service,
+	homeService *home_feed.Service,
 	songsService *songs.SongsService,
 	artistsService *artists.ArtistsService,
 	releasesService *releases.ReleasesService,
@@ -161,7 +161,7 @@ func (s *Server) RemoveSongFromPlaylist(ctx context.Context, req openapi.RemoveS
 }
 
 func (s *Server) GetHomeFeed(ctx context.Context, req openapi.GetHomeFeedRequestObject) (openapi.GetHomeFeedResponseObject, error) {
-	return home.HandleGetHomeFeed(ctx, s.homeService, s.logger, req)
+	return home_feed.HandleGetHomeFeed(ctx, s.homeService, s.logger, req)
 }
 
 func (s *Server) RecordUserEvent(ctx context.Context, request openapi.RecordUserEventRequestObject) (openapi.RecordUserEventResponseObject, error) {
