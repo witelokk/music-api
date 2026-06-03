@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -118,11 +119,31 @@ func HandleSearch(
 		case ResultTypeRelease:
 			apiItem.Type = openapi.SearchResultItemTypeRelease
 			if item.Release != nil {
+				artistSummaries := make([]openapi.ArtistSummary, 0, len(item.Release.Artists))
+				artistNames := make([]string, 0, len(item.Release.Artists))
+				for _, a := range item.Release.Artists {
+					summary := openapi.ArtistSummary{
+						Id:   uuidMustParse(a.ID),
+						Name: a.Name,
+					}
+					if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+						avatarURL := mediaurl.Build(*a.AvatarMediaID)
+						summary.AvatarUrl = &avatarURL
+					}
+					artistSummaries = append(artistSummaries, summary)
+					artistNames = append(artistNames, a.Name)
+				}
+
 				release := openapi.ReleaseSummary{
 					Id:         uuidMustParse(item.Release.ID),
 					Name:       item.Release.Name,
 					Type:       releasesapi.MapReleaseType(item.Release.Type),
 					ReleasedAt: item.Release.ReleaseAt,
+					Artists: openapi.ArtistList{
+						Count:   len(artistSummaries),
+						Artists: artistSummaries,
+						Names:   strings.Join(artistNames, ", "),
+					},
 				}
 				if item.Release.CoverMediaID != nil && *item.Release.CoverMediaID != "" {
 					coverURL := mediaurl.Build(*item.Release.CoverMediaID)

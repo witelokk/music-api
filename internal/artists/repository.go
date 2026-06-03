@@ -78,11 +78,19 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 
 	const releasesQuery = `
 		SELECT DISTINCT r.id, r.name, r.cover_media_id, r.type, r.release_at
-		FROM song_artists sa
-		JOIN release_songs rs ON rs.song_id = sa.song_id
-		JOIN releases r ON r.id = rs.release_id
-		WHERE sa.artist_id = $1
+		FROM release_artists ra
+		JOIN releases r ON r.id = ra.release_id
+		WHERE ra.artist_id = $1
 		ORDER BY r.release_at DESC
+	`
+
+	const releaseArtistsQuery = `
+		SELECT ra.release_id, a.id, a.name, a.avatar_media_id
+		FROM release_artists seed
+		JOIN release_artists ra ON ra.release_id = seed.release_id
+		JOIN artists a ON a.id = ra.artist_id
+		WHERE seed.artist_id = $1
+		ORDER BY ra.release_id, a.name
 	`
 
 	var (
@@ -199,6 +207,37 @@ func (r *PostgresArtistsRepository) GetArtistWithStats(ctx context.Context, id, 
 	}
 	if err := relRows.Err(); err != nil {
 		return nil, 0, false, err
+	}
+
+	relArtistRows, err := tx.Query(ctx, releaseArtistsQuery, id)
+	if err != nil {
+		return nil, 0, false, err
+	}
+	defer relArtistRows.Close()
+
+	releaseArtists := make(map[string][]ArtistSummary)
+	for relArtistRows.Next() {
+		var (
+			releaseID     string
+			artistID      string
+			artistName    string
+			avatarMediaID *string
+		)
+		if err := relArtistRows.Scan(&releaseID, &artistID, &artistName, &avatarMediaID); err != nil {
+			return nil, 0, false, err
+		}
+		releaseArtists[releaseID] = append(releaseArtists[releaseID], ArtistSummary{
+			ID:            artistID,
+			Name:          artistName,
+			AvatarMediaID: avatarMediaID,
+		})
+	}
+	if err := relArtistRows.Err(); err != nil {
+		return nil, 0, false, err
+	}
+
+	for i := range rels {
+		rels[i].Artists = releaseArtists[rels[i].ID]
 	}
 
 	if err := tx.Commit(ctx); err != nil {

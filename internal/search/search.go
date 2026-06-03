@@ -37,6 +37,7 @@ type ReleaseResult struct {
 	CoverMediaID *string
 	Type         int
 	ReleaseAt    string
+	Artists      []ArtistSummary
 }
 
 type PlaylistResult struct {

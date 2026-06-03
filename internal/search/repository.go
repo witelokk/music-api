@@ -174,7 +174,58 @@ func (r *PostgresSearchRepository) SearchReleases(ctx context.Context, query str
 		})
 	}
 
-	return results, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return results, nil
+	}
+
+	ids := make([]string, 0, len(results))
+	for _, rel := range results {
+		ids = append(ids, rel.ID)
+	}
+
+	const artistsQuery = `
+		SELECT ra.release_id, a.id, a.name, a.avatar_media_id
+		FROM release_artists ra
+		JOIN artists a ON a.id = ra.artist_id
+		WHERE ra.release_id = ANY($1::uuid[])
+		ORDER BY a.name
+	`
+
+	artistRows, err := r.pool.Query(ctx, artistsQuery, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer artistRows.Close()
+
+	artistsByRelease := make(map[string][]ArtistSummary)
+	for artistRows.Next() {
+		var (
+			releaseID     string
+			artistID      string
+			artistName    string
+			avatarMediaID *string
+		)
+		if err := artistRows.Scan(&releaseID, &artistID, &artistName, &avatarMediaID); err != nil {
+			return nil, err
+		}
+		artistsByRelease[releaseID] = append(artistsByRelease[releaseID], ArtistSummary{
+			ID:            artistID,
+			Name:          artistName,
+			AvatarMediaID: avatarMediaID,
+		})
+	}
+	if err := artistRows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range results {
+		results[i].Artists = artistsByRelease[results[i].ID]
+	}
+
+	return results, nil
 }
 
 func (r *PostgresSearchRepository) SearchPlaylists(ctx context.Context, query, userID string) ([]PlaylistResult, error) {

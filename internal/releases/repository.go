@@ -59,11 +59,10 @@ func (r *PostgresReleasesRepository) GetReleaseByID(ctx context.Context, userID,
 	`
 
 	const artistsQuery = `
-		SELECT DISTINCT a.id, a.name, a.avatar_media_id
-		FROM release_songs rs
-		JOIN song_artists sa ON sa.song_id = rs.song_id
-		JOIN artists a ON a.id = sa.artist_id
-		WHERE rs.release_id = $1
+		SELECT a.id, a.name, a.avatar_media_id
+		FROM release_artists ra
+		JOIN artists a ON a.id = ra.artist_id
+		WHERE ra.release_id = $1
 		ORDER BY a.name
 	`
 
@@ -244,54 +243,7 @@ func (r *PostgresReleasesRepository) GetRandomReleases(ctx context.Context, seed
 		return result, nil
 	}
 
-	ids := make([]string, 0, len(result))
-	for _, rel := range result {
-		ids = append(ids, rel.ID)
-	}
-
-	const artistsQuery = `
-		SELECT rs.release_id, a.id, a.name, a.avatar_media_id
-		FROM release_songs rs
-		JOIN song_artists sa ON sa.song_id = rs.song_id
-		JOIN artists a ON a.id = sa.artist_id
-		WHERE rs.release_id = ANY($1::uuid[])
-		ORDER BY a.name
-	`
-
-	artistRows, err := r.pool.Query(ctx, artistsQuery, ids)
-	if err != nil {
-		return nil, err
-	}
-	defer artistRows.Close()
-
-	artistsByRelease := make(map[string][]ReleaseArtist)
-	for artistRows.Next() {
-		var (
-			releaseID     string
-			artistID      string
-			name          string
-			avatarMediaID *string
-		)
-		if err := artistRows.Scan(&releaseID, &artistID, &name, &avatarMediaID); err != nil {
-			return nil, err
-		}
-		artistsByRelease[releaseID] = append(artistsByRelease[releaseID], ReleaseArtist{
-			ID:            artistID,
-			Name:          name,
-			AvatarMediaID: avatarMediaID,
-		})
-	}
-	if err := artistRows.Err(); err != nil {
-		return nil, err
-	}
-
-	for i, rel := range result {
-		if artists, ok := artistsByRelease[rel.ID]; ok {
-			result[i].Artists = artists
-		}
-	}
-
-	return result, nil
+	return r.attachArtists(ctx, result)
 }
 
 func (r *PostgresReleasesRepository) GetRecentReleases(ctx context.Context, limit int) ([]Release, error) {
@@ -456,11 +408,10 @@ func (r *PostgresReleasesRepository) attachArtists(ctx context.Context, result [
 	}
 
 	const artistsQuery = `
-		SELECT rs.release_id, a.id, a.name, a.avatar_media_id
-		FROM release_songs rs
-		JOIN song_artists sa ON sa.song_id = rs.song_id
-		JOIN artists a ON a.id = sa.artist_id
-		WHERE rs.release_id = ANY($1::uuid[])
+		SELECT ra.release_id, a.id, a.name, a.avatar_media_id
+		FROM release_artists ra
+		JOIN artists a ON a.id = ra.artist_id
+		WHERE ra.release_id = ANY($1::uuid[])
 		ORDER BY a.name
 	`
 

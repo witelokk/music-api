@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/witelokk/music-api/internal/auth"
@@ -72,11 +73,31 @@ func HandleGetArtist(
 
 	releases := make([]openapi.ReleaseSummary, 0, len(artist.Releases))
 	for _, r := range artist.Releases {
+		artistSummaries := make([]openapi.ArtistSummary, 0, len(r.Artists))
+		artistNames := make([]string, 0, len(r.Artists))
+		for _, a := range r.Artists {
+			summary := openapi.ArtistSummary{
+				Id:   uuid.MustParse(a.ID),
+				Name: a.Name,
+			}
+			if a.AvatarMediaID != nil && *a.AvatarMediaID != "" {
+				avatarURL := mediaurl.Build(*a.AvatarMediaID)
+				summary.AvatarUrl = &avatarURL
+			}
+			artistSummaries = append(artistSummaries, summary)
+			artistNames = append(artistNames, a.Name)
+		}
+
 		rel := openapi.ReleaseSummary{
 			Id:         uuid.MustParse(r.ID),
 			Name:       r.Name,
 			Type:       releasesapi.MapReleaseType(r.Type),
 			ReleasedAt: r.ReleaseAt.Format("2006-01-02"),
+			Artists: openapi.ArtistList{
+				Count:   len(artistSummaries),
+				Artists: artistSummaries,
+				Names:   strings.Join(artistNames, ", "),
+			},
 		}
 		if r.CoverMediaID != nil && *r.CoverMediaID != "" {
 			coverURL := mediaurl.Build(*r.CoverMediaID)

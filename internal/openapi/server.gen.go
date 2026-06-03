@@ -434,6 +434,7 @@ type Release struct {
 
 // ReleaseSummary defines model for ReleaseSummary.
 type ReleaseSummary struct {
+	Artists    ArtistList         `json:"artists"`
 	CoverUrl   *string            `json:"cover_url,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 	Name       string             `json:"name"`

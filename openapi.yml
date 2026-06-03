@@ -1329,11 +1329,14 @@ components:
           $ref: '#/components/schemas/ReleaseType'
         released_at:
           type: string
+        artists:
+          $ref: '#/components/schemas/ArtistList'
       required:
         - id
         - name
         - type
         - released_at
+        - artists
 
     SearchResultItem:
       type: object

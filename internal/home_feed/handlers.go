@@ -3,6 +3,7 @@ package home_feed
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -136,15 +137,31 @@ func toOpenAPIArtistSummary(id, name string, avatarMediaID *string) openapi.Arti
 }
 
 func toOpenAPIReleaseSummary(rel releasesapi.Release) openapi.ReleaseSummary {
+	artists, artistNames := toOpenAPIReleaseArtistList(rel.Artists)
 	summary := openapi.ReleaseSummary{
 		Id:         uuid.MustParse(rel.ID),
 		Name:       rel.Name,
 		Type:       releasesapi.MapReleaseType(rel.Type),
 		ReleasedAt: rel.ReleaseAt.Format("2006-01-02"),
+		Artists: openapi.ArtistList{
+			Count:   len(artists),
+			Artists: artists,
+			Names:   strings.Join(artistNames, ", "),
+		},
 	}
 	if rel.CoverMediaID != nil && *rel.CoverMediaID != "" {
 		coverURL := mediaurl.Build(*rel.CoverMediaID)
 		summary.CoverUrl = &coverURL
 	}
 	return summary
+}
+
+func toOpenAPIReleaseArtistList(artists []releasesapi.ReleaseArtist) ([]openapi.ArtistSummary, []string) {
+	summaries := make([]openapi.ArtistSummary, 0, len(artists))
+	names := make([]string, 0, len(artists))
+	for _, a := range artists {
+		summaries = append(summaries, toOpenAPIArtistSummary(a.ID, a.Name, a.AvatarMediaID))
+		names = append(names, a.Name)
+	}
+	return summaries, names
 }

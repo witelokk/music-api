@@ -27,6 +27,7 @@ type ArtistRelease struct {
 	CoverMediaID *string
 	Type         int
 	ReleaseAt    time.Time
+	Artists      []ArtistSummary
 }
 
 type ArtistSummary struct {
